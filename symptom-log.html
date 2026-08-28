@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16232A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Symptom Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16232A; --ink-2:#33474F; --muted:#6C8189; --hair:#D2DBD6;
+  --paper:#E9EDEA; --surface:#FFFFFF; --surface-2:#F4F7F4;
+  --teal:#12615C; --teal-ink:#0C4A46; --teal-wash:#DDEBE8;
+  --plum:#7A3B5C; --plum-wash:#F0E2E9;
+  --amber:#B0761F; --amber-wash:#F6ECD9;
+  --r:14px; --r-sm:9px;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --display:"Fraunces",Georgia,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(74px + env(safe-area-inset-bottom));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2.5px solid var(--teal);outline-offset:2px;border-radius:4px}
+.wrap{max-width:600px;margin:0 auto;padding:0 16px}
+.hidden{display:none !important}
+
+/* ---------- masthead ---------- */
+header.top{
+  background:var(--ink); color:#EAF0EC; padding:18px 0 15px;
+  border-bottom:3px solid var(--teal);
+}
+header.top .wrap{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:-.015em}
+.brand em{font-style:normal;color:#8FC4BC}
+.whoami{font-family:var(--mono);font-size:11px;color:#8CA5A0;text-align:right;line-height:1.3}
+.linkish{background:none;border:0;padding:0;color:#8FC4BC;text-decoration:underline;
+  text-underline-offset:2px;font-size:11px;font-family:var(--mono);cursor:pointer}
+
+/* ---------- generic ---------- */
+h2.sec{font-family:var(--display);font-weight:600;font-size:20px;margin:26px 0 3px;letter-spacing:-.01em}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:13.5px}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:16px;margin-bottom:12px}
+label.fl{display:block;font-size:12px;font-weight:600;letter-spacing:.055em;
+  text-transform:uppercase;color:var(--ink-2);margin:0 0 6px}
+.field{margin-bottom:16px}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=email],
+input[type=password],textarea,select{
+  width:100%;padding:12px 13px;border:1.5px solid var(--hair);border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--ink);
+}
+input:focus,textarea:focus,select:focus{border-color:var(--teal);background:#fff;outline:none}
+textarea{resize:vertical;min-height:74px;line-height:1.5}
+input[type=number]{font-family:var(--mono)}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  padding:9px 13px;border:1.5px solid var(--hair);border-radius:999px;background:var(--surface-2);
+  font-size:14px;cursor:pointer;user-select:none;transition:background .12s,border-color .12s,color .12s;
+}
+.chip[aria-pressed=true]{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:500}
+.chip.sym[aria-pressed=true]{background:var(--plum);border-color:var(--plum)}
+.scale{display:flex;gap:6px}
+.scale .chip{flex:1;text-align:center;font-family:var(--mono);padding:11px 0}
+
+/* toggle */
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 0;border-top:1px solid var(--hair)}
+.toggle:first-of-type{border-top:0}
+.toggle span{font-size:15px}
+.sw{width:52px;height:31px;border-radius:999px;background:#CBD5CF;border:0;position:relative;
+  cursor:pointer;flex:none;transition:background .16s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;
+  background:#fff;transition:transform .16s;box-shadow:0 1px 3px rgba(0,0,0,.28)}
+.sw[aria-pressed=true]{background:var(--teal)}
+.sw[aria-pressed=true]::after{transform:translateX(21px)}
+
+/* buttons */
+.btn{width:100%;padding:15px;border:0;border-radius:var(--r-sm);background:var(--teal);color:#fff;
+  font-weight:600;font-size:16px;cursor:pointer;transition:background .13s}
+.btn:active{background:var(--teal-ink)}
+.btn[disabled]{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;color:var(--teal);border:1.5px solid var(--teal)}
+.btn.ghost:active{background:var(--teal-wash)}
+.btn.sm{padding:11px;font-size:14px}
+.btn.danger{background:transparent;color:#8C3A3A;border:1.5px solid #E0C4C4}
+
+/* auto tags */
+.autotags{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;min-height:22px}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:4px 9px;border-radius:5px;
+  background:var(--teal-wash);color:var(--teal-ink)}
+.tag.none{background:transparent;color:var(--muted);padding-left:0}
+
+/* entries */
+.daygroup{margin-bottom:22px}
+.dayhead{font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);padding-bottom:7px;border-bottom:1px solid var(--hair);margin-bottom:11px}
+.meal{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);
+  padding:14px;margin-bottom:9px}
+.meal.sym{border-left:4px solid var(--plum)}
+.meal-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.mcode{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.05em}
+.mtime{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.mfood{margin:7px 0 0;font-size:15px;line-height:1.45}
+.symrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.pill{font-size:11.5px;padding:3px 9px;border-radius:999px;background:var(--plum-wash);color:var(--plum);font-weight:500}
+.pill.meta{background:var(--surface-2);color:var(--ink-2)}
+.mactions{display:flex;gap:8px;margin-top:11px}
+.mactions button{flex:1;padding:8px;font-size:13px;border-radius:7px;border:1px solid var(--hair);
+  background:var(--surface-2);cursor:pointer}
+
+/* glucose trace — the signature */
+.trace{margin-top:11px;padding:11px 12px 8px;background:var(--amber-wash);border-radius:var(--r-sm)}
+.trace-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:5px}
+.trace svg{display:block;width:100%;height:auto}
+.trace .pt{font-family:var(--mono);font-size:11px;font-weight:500;fill:var(--ink-2)}
+.trace .pt.tm{font-size:9.5px;fill:var(--amber);font-weight:400}
+
+/* insights */
+.stat{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;
+  border-bottom:1px solid var(--hair)}
+.stat:last-child{border-bottom:0}
+.stat b{font-family:var(--mono);font-weight:600;font-size:19px}
+.stat span{font-size:14px;color:var(--ink-2)}
+.gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
+table.matrix{border-collapse:collapse;font-size:13px;min-width:100%}
+table.matrix th,table.matrix td{padding:8px 7px;text-align:center;white-space:nowrap}
+table.matrix th.rowh{text-align:left;font-weight:500;position:sticky;left:0;background:var(--surface);
+  padding-right:12px;z-index:1}
+table.matrix thead th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);
+  font-weight:600;vertical-align:bottom;line-height:1.25;white-space:normal;min-width:58px}
+table.matrix tr.count td,table.matrix tr.count th{border-bottom:2px solid var(--ink);
+  font-family:var(--mono);font-size:12px;color:var(--muted);padding-bottom:6px}
+table.matrix td.v{font-family:var(--mono);line-height:1.15;padding:7px}
+table.matrix td.v small{display:block;font-size:9.5px;opacity:.6;font-weight:400;margin-top:1px}
+table.matrix .basecol{border-left:2px solid var(--hair);background:var(--surface-2)}
+table.matrix thead th.basecol{color:var(--ink)}
+table.matrix td.hi{background:var(--plum);color:#fff;border-radius:5px;font-weight:600}
+table.matrix td.mid{background:var(--plum-wash);color:var(--plum);border-radius:5px}
+table.matrix tr.base th,table.matrix tr.base td{color:var(--muted);font-size:11.5px;
+  border-top:1px solid var(--hair)}
+.legend{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.5}
+.warn{background:var(--amber-wash);border-left:3px solid var(--amber);padding:11px 13px;
+  border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:13.5px;color:#6B4A12;margin-bottom:14px}
+
+/* nav */
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(9px);border-top:1px solid var(--hair);display:flex;
+  padding-bottom:env(safe-area-inset-bottom);z-index:40}
+nav.tabs button{flex:1;background:none;border:0;padding:11px 4px 12px;cursor:pointer;
+  color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;
+  letter-spacing:.03em;font-weight:500}
+nav.tabs button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button[aria-current=true]{color:var(--teal)}
+
+/* auth */
+.auth{max-width:390px;margin:52px auto;padding:0 20px}
+.auth .card{padding:22px}
+.auth h1{font-family:var(--display);font-size:27px;margin:0 0 5px;font-weight:600}
+.auth p.lede{color:var(--muted);font-size:14px;margin:0 0 22px;line-height:1.5}
+.msg{padding:11px 13px;border-radius:var(--r-sm);font-size:13.5px;margin-bottom:14px;line-height:1.45}
+.msg.err{background:#F7E4E4;color:#8C3A3A}
+.msg.ok{background:var(--teal-wash);color:var(--teal-ink)}
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty p{margin:0 0 16px;font-size:14.5px;line-height:1.5}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));
+  background:var(--ink);color:#fff;padding:12px 19px;border-radius:999px;font-size:14px;z-index:60;
+  box-shadow:0 5px 20px rgba(0,0,0,.24);max-width:88vw;text-align:center}
+.spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;
+  border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+
+/* print */
+#printroot{display:none}
+@media print{
+  body{background:#fff;padding:0}
+  header.top,nav.tabs,#app,.toast{display:none !important}
+  #printroot{display:block;padding:0;font-size:11pt}
+  #printroot h1{font-family:var(--display);font-size:19pt;margin:0 0 3px}
+  #printroot .meta{color:#555;font-size:9.5pt;margin-bottom:16px}
+  #printroot h2{font-size:12.5pt;margin:17px 0 7px;border-bottom:1.5px solid #000;padding-bottom:3px}
+  #printroot table{width:100%;border-collapse:collapse;font-size:8.8pt;margin-bottom:10px}
+  #printroot th,#printroot td{border:1px solid #999;padding:3.5px 5px;text-align:left;vertical-align:top}
+  #printroot th{background:#EEE;font-weight:600}
+  #printroot .kv{display:flex;gap:26px;flex-wrap:wrap;font-size:10pt;margin-bottom:10px}
+  #printroot .kv div{min-width:130px}
+  #printroot .kv b{font-family:var(--mono)}
+  @page{margin:14mm}
+}
+</style>
+</head>
+<body>
+
+<div id="authview" class="auth hidden">
+  <h1>Symptom Log</h1>
+  <p class="lede">Meals, symptoms, and what your numbers do afterward. Private to your account.</p>
+  <div class="card">
+    <div id="authmsg"></div>
+    <div class="field">
+      <label class="fl" for="em">Email</label>
+      <input type="email" id="em" autocomplete="email" inputmode="email">
+    </div>
+    <div class="field">
+      <label class="fl" for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password">
+    </div>
+    <button class="btn" id="signin">Sign in</button>
+    <div style="height:9px"></div>
+    <button class="btn ghost" id="signup">Create account</button>
+  </div>
+</div>
+
+<div id="shell" class="hidden">
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">Symptom <em>Log</em></div>
+      <div class="whoami"><span id="uemail"></span><br><button class="linkish" id="signout">Sign out</button></div>
+    </div>
+  </header>
+
+  <main id="app" class="wrap"></main>
+
+  <nav class="tabs">
+    <button data-tab="add" aria-current="true">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button>
+    <button data-tab="entries">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h11"/></svg>Entries</button>
+    <button data-tab="reading">
+      <svg viewBox="0 0 24 24"><path d="M3 15l4.5-6 4 4.5L15 7l6 8"/></svg>Reading</button>
+    <button data-tab="insights">
+      <svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Insights</button>
+  </nav>
+</div>
+
+<div id="printroot"></div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const SUPABASE_URL = "https://dgeqfwoutytuvzodmyhe.supabase.co";
+const SUPABASE_KEY = "sb_publishable_RS8NgZt1QKoPb7uFa9jj1Q_S4Qq9anY";
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------------- reference data ---------------- */
+const SYMPTOMS = ["Racing heart","Urgency/BM","Sweating","Shakiness",
+                  "Lightheaded","Bloating/Cramping","Nausea","Tired/Fatigued"];
+
+const TRIGGERS = {
+  "Caffeine":["coffee","espresso","latte","cappuccino","mocha","matcha","chai","cola","coke",
+    "pepsi","dr pepper","soda","energy drink","sweet tea","iced tea","green tea","black tea","hot tea"],
+  "Dairy":["cheese","milk","yogurt","cream","butter","queso","ranch","latte","custard","gelato"],
+  "High-fat / fried":["fried","fries","chips","breaded","crispy","nugget","pizza","bacon",
+    "empanada","sausage","burger","donut","tempura"],
+  "Spicy":["spicy","hot sauce","jalapeno","jalapeño","sriracha","buffalo","chili","salsa",
+    "cayenne","pepper jack","enchilada","curry"],
+  "High-FODMAP":["onion","garlic","wheat","bread","sandwich","cracker","saltine","pizza","tortilla",
+    "bagel","bun","toast","muffin","pastry","apple","pear","watermelon","mango","honey","bean",
+    "lentil","chickpea","hummus","cauliflower","mushroom","asparagus","milk","yogurt","granola",
+    "pasta","cereal","rye"],
+  "Alcohol":["beer","wine","vodka","whiskey","bourbon","tequila","rum","cocktail","margarita mix",
+    "hard seltzer","prosecco","champagne"],
+  "Artificial sweetener":["diet ","sugar-free","sugar free","splenda","stevia","aspartame",
+    "zero sugar","no sugar added","erythritol","xylitol","sorbitol"],
+};
+const DAIRY_NOT = ["non-dairy","non dairy","dairy-free","dairy free","vegan","oat milk","almond milk","soy milk"];
+
+function autoTags(text){
+  const t = (text||"").toLowerCase();
+  if(!t.trim()) return [];
+  const out=[];
+  for(const [name,words] of Object.entries(TRIGGERS)){
+    let hit = words.some(w=>t.includes(w));
+    if(name==="Dairy" && hit && DAIRY_NOT.some(w=>t.includes(w))) hit=false;
+    if(hit) out.push(name);
+  }
+  return out;
+}
+
+/* ---------------- seed ---------------- */
+const SEED = [{"meal_code": "M001", "when": "2026-08-22T13:30", "meal_type": "Lunch", "foods": "Leftover Mexican: Chicken and cheese empanada and 2 chicken Enchiladas with red sauce", "large_portion": false, "any_symptoms": true, "onset": 30, "symptoms": ["Urgency/BM"], "symptom_order": "Bothered my stomach. I didnt have a bowel movement but felt like i needed to", "duration": 30, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M002", "when": "2026-08-22T17:30", "meal_type": "Dinner", "foods": "Chick-fil-a two breaded schicken sandwiches, Waffle Fries, Lemonade", "large_portion": true, "any_symptoms": true, "onset": 60, "symptoms": ["Racing heart", "Urgency/BM", "Tired/Fatigued"], "symptom_order": "Racing Heart, then bowel movement, then tired", "duration": 60, "severity": 4, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M003", "when": "2026-08-22T22:45", "meal_type": "Snack", "foods": "chicken salad with light mayo and saltines", "large_portion": false, "any_symptoms": true, "onset": 85, "symptoms": ["Racing heart"], "symptom_order": "Racing heart", "duration": null, "severity": 2, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M004", "when": "2026-08-23T09:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Strawberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M005", "when": "2026-08-23T13:10", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": true, "onset": 45, "symptoms": ["Urgency/BM"], "symptom_order": "Urgent diarrhea ", "duration": 20, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M006", "when": "2026-08-23T17:45", "meal_type": "Dinner", "foods": "Pesto Margarita pizza with grilled chicken and a lemon sparkling water", "large_portion": true, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M007", "when": "2026-08-23T21:45", "meal_type": "Snack", "foods": "Ben & Jerrys non-dairy ice cream", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M008", "when": "2026-08-24T20:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M009", "when": "2026-08-24T13:00", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M010", "when": "2026-08-23T18:00", "meal_type": "Dinner", "foods": "Flounder with lemon garlic sauce. Brown rice, Brocolli, and a Lemon Sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M011", "when": "2026-08-25T08:50", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M012", "when": "2026-08-25T13:00", "meal_type": "Lunch", "foods": "Ham and cheese sandwich and kettle chips. Lemon sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M013", "when": "2026-08-25T17:00", "meal_type": "Dinner", "foods": "chicken sandwich with goat cheese and basil aoili and roasted red peppers. Vodka cocktail", "large_portion": false, "any_symptoms": true, "onset": 60, "symptoms": ["Shakiness", "Tired/Fatigued"], "symptom_order": "after an hour and a half my blood sugar was 183 i checked again 45 minutes to an hour later and it had gone up to 203 without eating again ", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}];
+
+/* ---------------- state ---------------- */
+let user=null, meals=[], readings=[], tab="add", editing=null;
+
+const $ = s=>document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function toast(msg,ms=2400){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const d=document.createElement("div"); d.className="toast"; d.textContent=msg;
+  document.body.appendChild(d); setTimeout(()=>d.remove(),ms);
+}
+const pad=n=>String(n).padStart(2,"0");
+function localDate(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function localTime(d){return `${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function fmtDay(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+}
+function fmtTime(iso){
+  return new Date(iso).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+function nextCode(){
+  let max=0;
+  meals.forEach(m=>{const n=parseInt(String(m.meal_code).replace(/\D/g,""),10); if(n>max)max=n;});
+  return "M"+String(max+1).padStart(3,"0");
+}
+
+/* ---------------- data ---------------- */
+async function load(){
+  const [m,r] = await Promise.all([
+    sb.from("meals").select("*").order("eaten_at",{ascending:false}),
+    sb.from("readings").select("*").order("taken_at",{ascending:true}),
+  ]);
+  if(m.error) toast("Couldn't load meals: "+m.error.message);
+  if(r.error) toast("Couldn't load readings: "+r.error.message);
+  meals=m.data||[]; readings=r.data||[];
+}
+const readingsFor = id => readings.filter(x=>x.meal_id===id)
+  .sort((a,b)=>(a.minutes_after_eating??0)-(b.minutes_after_eating??0));
+
+/* ================= ADD MEAL ================= */
+function viewAdd(){
+  const e=editing, now=new Date();
+  const d = e? new Date(e.eaten_at) : now;
+  const sy = e? (e.symptoms||[]) : [];
+  app.innerHTML = `
+    <h2 class="sec">${e?"Edit meal":"New meal"}</h2>
+    <p class="sub">${e? esc(e.meal_code) : nextCode()} &middot; every meal counts, symptoms or not.</p>
+
+    <div class="card">
+      <div class="row field">
+        <div><label class="fl" for="f_date">Date</label><input type="date" id="f_date" value="${localDate(d)}"></div>
+        <div><label class="fl" for="f_time">Time</label><input type="time" id="f_time" value="${localTime(d)}"></div>
+      </div>
+      <div class="field">
+        <label class="fl">Meal</label>
+        <div class="chips" id="f_type">
+          ${["Breakfast","Lunch","Dinner","Snack"].map(t=>
+            `<button type="button" class="chip" data-v="${t}" aria-pressed="${e&&e.meal_type===t}">${t}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:6px">
+        <label class="fl" for="f_food">What you ate and drank</label>
+        <textarea id="f_food" placeholder="Be specific — brands, sauces, drinks. The tags below read this.">${e?esc(e.foods):""}</textarea>
+        <div class="autotags" id="f_tags"></div>
+      </div>
+      <div class="toggle" style="border-top:1px solid var(--hair);margin-top:12px">
+        <span>Unusually large portion</span>
+        <button class="sw" id="f_big" aria-pressed="${!!(e&&e.large_portion)}" aria-label="Large portion"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toggle">
+        <span><b>Any symptoms?</b></span>
+        <button class="sw" id="f_any" aria-pressed="${!!(e&&e.any_symptoms)}" aria-label="Any symptoms"></button>
+      </div>
+      <div id="sympbox" class="${e&&e.any_symptoms?"":"hidden"}" style="padding-top:6px">
+        <div class="field">
+          <label class="fl">Which ones</label>
+          <div class="chips" id="f_symp">
+            ${SYMPTOMS.map(s=>`<button type="button" class="chip sym" data-v="${s}" aria-pressed="${sy.includes(s)}">${s}</button>`).join("")}
+          </div>
+        </div>
+        <div class="row field">
+          <div><label class="fl" for="f_onset">Started (min after)</label>
+            <input type="number" id="f_onset" inputmode="numeric" placeholder="60" value="${e&&e.onset_minutes!=null?e.onset_minutes:""}"></div>
+          <div><label class="fl" for="f_dur">Lasted (min)</label>
+            <input type="number" id="f_dur" inputmode="numeric" placeholder="20" value="${e&&e.duration_minutes!=null?e.duration_minutes:""}"></div>
+        </div>
+        <div class="field">
+          <label class="fl">Severity</label>
+          <div class="scale" id="f_sev">
+            ${[1,2,3,4,5].map(n=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${e&&e.severity===n}">${n}</button>`).join("")}
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="fl" for="f_order">What happened in what order</label>
+          <textarea id="f_order" style="min-height:56px" placeholder="Racing heart first, then urgency about 5 min later">${e?esc(e.symptom_order):""}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label class="fl">Sleep last night</label>
+        <div class="scale" id="f_sleep">
+          ${[1,2,3,4,5].map(n=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${e&&e.sleep_quality===n}">${n}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <label class="fl">Stress today</label>
+        <div class="scale" id="f_stress">
+          ${[1,2,3,4,5].map(n=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${e&&e.stress_level===n}">${n}</button>`).join("")}
+        </div>
+      </div>
+      <div class="toggle">
+        <span>Exercised today</span>
+        <button class="sw" id="f_ex" aria-pressed="${!!(e&&e.exercised)}" aria-label="Exercised"></button>
+      </div>
+      <div class="field" style="margin:14px 0 0">
+        <label class="fl" for="f_notes">Notes</label>
+        <textarea id="f_notes" style="min-height:56px">${e?esc(e.notes):""}</textarea>
+      </div>
+    </div>
+
+    <button class="btn" id="save">${e?"Save changes":"Save meal"}</button>
+    ${e?`<div style="height:9px"></div><button class="btn ghost" id="cancel">Cancel</button>`:""}
+    <div style="height:26px"></div>`;
+
+  const paint=()=>{
+    const tags=autoTags($("#f_food").value);
+    $("#f_tags").innerHTML = tags.length
+      ? tags.map(t=>`<span class="tag">${t}</span>`).join("")
+      : `<span class="tag none">Tags appear as you type</span>`;
+  };
+  $("#f_food").addEventListener("input",paint); paint();
+
+  document.querySelectorAll("#f_type .chip,#f_sev .chip,#f_sleep .chip,#f_stress .chip")
+    .forEach(c=>c.onclick=()=>{
+      const on=c.getAttribute("aria-pressed")==="true";
+      c.parentElement.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+      c.setAttribute("aria-pressed", on?"false":"true");
+    });
+  document.querySelectorAll("#f_symp .chip").forEach(c=>c.onclick=()=>
+    c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")==="true"?"false":"true"));
+  ["f_big","f_ex"].forEach(id=>$("#"+id).onclick=e2=>
+    e2.currentTarget.setAttribute("aria-pressed", e2.currentTarget.getAttribute("aria-pressed")==="true"?"false":"true"));
+  $("#f_any").onclick=e2=>{
+    const on=e2.currentTarget.getAttribute("aria-pressed")!=="true";
+    e2.currentTarget.setAttribute("aria-pressed",on);
+    $("#sympbox").classList.toggle("hidden",!on);
+  };
+  if($("#cancel")) $("#cancel").onclick=()=>{editing=null;render()};
+  $("#save").onclick=saveMeal;
+}
+
+const pick = sel => {const c=document.querySelector(sel+" .chip[aria-pressed=true]"); return c?c.dataset.v:null};
+const num = v => {const n=parseInt(v,10); return Number.isFinite(n)?n:null};
+
+async function saveMeal(){
+  const btn=$("#save");
+  const foods=$("#f_food").value.trim();
+  if(!foods) return toast("Add what you ate first");
+  const dt=new Date(`${$("#f_date").value}T${$("#f_time").value||"12:00"}`);
+  if(isNaN(dt)) return toast("Check the date and time");
+  const any=$("#f_any").getAttribute("aria-pressed")==="true";
+  const sev=pick("#f_sev"), slp=pick("#f_sleep"), str=pick("#f_stress");
+  const payload={
+    user_id:user.id,
+    eaten_at:dt.toISOString(),
+    meal_type:pick("#f_type"),
+    foods,
+    large_portion:$("#f_big").getAttribute("aria-pressed")==="true",
+    any_symptoms:any,
+    onset_minutes:any?num($("#f_onset").value):null,
+    duration_minutes:any?num($("#f_dur").value):null,
+    severity:any&&sev?+sev:null,
+    symptoms:any?[...document.querySelectorAll("#f_symp .chip[aria-pressed=true]")].map(c=>c.dataset.v):[],
+    symptom_order:any?$("#f_order").value.trim():"",
+    sleep_quality:slp?+slp:null,
+    stress_level:str?+str:null,
+    exercised:$("#f_ex").getAttribute("aria-pressed")==="true",
+    notes:$("#f_notes").value.trim(),
+  };
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  let err;
+  if(editing){
+    ({error:err} = await sb.from("meals").update(payload).eq("id",editing.id));
+  }else{
+    payload.meal_code=nextCode();
+    ({error:err} = await sb.from("meals").insert(payload));
+  }
+  btn.disabled=false;
+  if(err){ btn.textContent=editing?"Save changes":"Save meal"; return toast("Didn't save: "+err.message,4200); }
+  const was=editing; editing=null;
+  await load();
+  toast(was?"Meal updated":"Meal saved");
+  tab = was ? "entries" : "add";
+  render();
+}
+
+/* ================= READING ================= */
+function viewReading(){
+  const recent=meals.slice(0,40);
+  if(!recent.length){
+    app.innerHTML=`<h2 class="sec">New reading</h2>
+      <div class="empty"><p>Log a meal first — a reading attaches to the meal it followed.</p>
+      <button class="btn ghost" onclick="document.querySelector('[data-tab=add]').click()">Add a meal</button></div>`;
+    return;
+  }
+  const now=new Date();
+  app.innerHTML=`
+    <h2 class="sec">New reading</h2>
+    <p class="sub">Blood sugar, pulse, or pressure — as many per meal as you take.</p>
+    <div class="card">
+      <div class="field">
+        <label class="fl" for="r_meal">After which meal</label>
+        <select id="r_meal">
+          ${recent.map(m=>`<option value="${m.id}">${esc(m.meal_code)} · ${fmtDay(m.eaten_at)} ${fmtTime(m.eaten_at)} — ${esc(m.foods.slice(0,42))}${m.foods.length>42?"…":""}</option>`).join("")}
+        </select>
+      </div>
+      <div class="row field">
+        <div><label class="fl" for="r_date">Date</label><input type="date" id="r_date" value="${localDate(now)}"></div>
+        <div><label class="fl" for="r_time">Time</label><input type="time" id="r_time" value="${localTime(now)}"></div>
+      </div>
+      <p class="sub" id="r_gap" style="margin:-6px 0 14px;font-family:var(--mono);font-size:12px"></p>
+      <div class="row field">
+        <div><label class="fl" for="r_bg">Blood sugar</label><input type="number" id="r_bg" inputmode="numeric" placeholder="mg/dL"></div>
+        <div><label class="fl" for="r_pulse">Pulse</label><input type="number" id="r_pulse" inputmode="numeric" placeholder="bpm"></div>
+      </div>
+      <div class="row field">
+        <div><label class="fl" for="r_sys">BP systolic</label><input type="number" id="r_sys" inputmode="numeric" placeholder="120"></div>
+        <div><label class="fl" for="r_dia">BP diastolic</label><input type="number" id="r_dia" inputmode="numeric" placeholder="80"></div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label class="fl" for="r_notes">Notes</label>
+        <input type="text" id="r_notes" placeholder="Felt shaky when I checked">
+      </div>
+    </div>
+    <button class="btn" id="rsave">Save reading</button>
+    <div style="height:26px"></div>`;
+
+  const gap=()=>{
+    const m=meals.find(x=>x.id===$("#r_meal").value);
+    const t=new Date(`${$("#r_date").value}T${$("#r_time").value||"12:00"}`);
+    if(!m||isNaN(t)) return $("#r_gap").textContent="";
+    const mins=Math.round((t-new Date(m.eaten_at))/60000);
+    $("#r_gap").textContent = mins>=0
+      ? `${mins} min after eating`
+      : `${Math.abs(mins)} min BEFORE that meal — check the time`;
+  };
+  ["r_meal","r_date","r_time"].forEach(id=>$("#"+id).addEventListener("change",gap)); gap();
+  $("#rsave").onclick=saveReading;
+}
+
+async function saveReading(){
+  const btn=$("#rsave");
+  const bg=num($("#r_bg").value), pu=num($("#r_pulse").value),
+        sys=num($("#r_sys").value), dia=num($("#r_dia").value);
+  if(bg==null&&pu==null&&sys==null&&dia==null) return toast("Enter at least one number");
+  const m=meals.find(x=>x.id===$("#r_meal").value);
+  const t=new Date(`${$("#r_date").value}T${$("#r_time").value||"12:00"}`);
+  if(isNaN(t)) return toast("Check the date and time");
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {error}=await sb.from("readings").insert({
+    user_id:user.id, meal_id:m.id, taken_at:t.toISOString(),
+    minutes_after_eating:Math.round((t-new Date(m.eaten_at))/60000),
+    blood_sugar:bg, pulse:pu, bp_systolic:sys, bp_diastolic:dia,
+    notes:$("#r_notes").value.trim(),
+  });
+  btn.disabled=false; btn.textContent="Save reading";
+  if(error) return toast("Didn't save: "+error.message,4200);
+  await load(); toast("Reading saved"); tab="entries"; render();
+}
+
+/* ================= ENTRIES ================= */
+function trace(rs){
+  const pts=rs.filter(r=>r.blood_sugar!=null);
+  if(pts.length<1) return "";
+  const VB_W=320, VB_H=76, PAD_X=30, PAD_T=20, PAD_B=17;
+  const W=VB_W-PAD_X*2, H=VB_H-PAD_T-PAD_B;
+  const xs=pts.map(p=>p.minutes_after_eating??0), ys=pts.map(p=>p.blood_sugar);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const sx=v=>PAD_X+(x1===x0?W/2:((v-x0)/(x1-x0))*W);
+  const sy=v=>PAD_T+(y1===y0?H/2:H-((v-y0)/(y1-y0))*H);
+  const path=pts.map((p,i)=>`${i?"L":"M"}${sx(p.minutes_after_eating??0).toFixed(1)},${sy(p.blood_sugar).toFixed(1)}`).join(" ");
+  const dots=pts.map(p=>`<circle cx="${sx(p.minutes_after_eating??0).toFixed(1)}" cy="${sy(p.blood_sugar).toFixed(1)}" r="3.4" fill="#B0761F"/>`).join("");
+  const labs=pts.map(p=>{
+    const x=sx(p.minutes_after_eating??0), y=sy(p.blood_sugar);
+    return `<text class="pt" x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="middle">${p.blood_sugar}</text>
+            <text class="pt tm" x="${x.toFixed(1)}" y="${(VB_H-4).toFixed(1)}" text-anchor="middle">${p.minutes_after_eating??0}m</text>`;
+  }).join("");
+  const delta = pts.length>1 ? (pts[pts.length-1].blood_sugar-pts[0].blood_sugar) : null;
+  return `<div class="trace">
+    <div class="trace-h">Blood sugar${delta!==null?` &middot; ${delta>0?"+":""}${delta} over ${(xs[xs.length-1]-xs[0])} min`:""}</div>
+    <svg viewBox="0 0 ${VB_W} ${VB_H}" role="img" aria-label="Blood sugar readings after this meal">
+      ${pts.length>1?`<path d="${path}" fill="none" stroke="#B0761F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`:""}
+      ${dots}${labs}
+    </svg></div>`;
+}
+
+function viewEntries(){
+  if(!meals.length){
+    app.innerHTML=`<h2 class="sec">Entries</h2>
+      <div class="empty"><p>Nothing logged yet.</p>
+      ${SEED.length?`<button class="btn ghost" id="seed">Import my ${SEED.length} earlier entries</button>`:""}</div>`;
+    if($("#seed")) $("#seed").onclick=importSeed;
+    return;
+  }
+  const groups={};
+  meals.forEach(m=>{(groups[fmtDay(m.eaten_at)] ||= []).push(m)});
+  app.innerHTML=`<h2 class="sec">Entries</h2>
+    <p class="sub">${meals.length} meals &middot; ${readings.length} readings</p>` +
+    Object.entries(groups).map(([day,ms])=>`
+      <div class="daygroup"><div class="dayhead">${day}</div>
+      ${ms.map(m=>{
+        const rs=readingsFor(m.id), tags=autoTags(m.foods);
+        return `<div class="meal ${m.any_symptoms?"sym":""}">
+          <div class="meal-top">
+            <span class="mcode">${esc(m.meal_code)}${m.meal_type?" · "+esc(m.meal_type):""}</span>
+            <span class="mtime">${fmtTime(m.eaten_at)}</span>
+          </div>
+          <p class="mfood">${esc(m.foods)}</p>
+          ${tags.length?`<div class="autotags">${tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`:""}
+          ${(m.symptoms||[]).length||m.any_symptoms?`<div class="symrow">
+            ${(m.symptoms||[]).map(s=>`<span class="pill">${esc(s)}</span>`).join("")}
+            ${m.onset_minutes!=null?`<span class="pill meta">+${m.onset_minutes} min</span>`:""}
+            ${m.severity!=null?`<span class="pill meta">sev ${m.severity}</span>`:""}
+          </div>`:""}
+          ${trace(rs)}
+          ${rs.filter(r=>r.pulse!=null||r.bp_systolic!=null).map(r=>
+            `<div class="symrow"><span class="pill meta">${r.minutes_after_eating??0}m${
+              r.pulse!=null?` · ${r.pulse} bpm`:""}${
+              r.bp_systolic!=null?` · ${r.bp_systolic}/${r.bp_diastolic??"?"}`:""}</span></div>`).join("")}
+          ${m.notes?`<p class="sub" style="margin:9px 0 0;font-size:13px">${esc(m.notes)}</p>`:""}
+          <div class="mactions">
+            <button data-edit="${m.id}">Edit</button>
+            <button data-del="${m.id}">Delete</button>
+          </div></div>`}).join("")}
+      </div>`).join("");
+
+  app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
+    editing=meals.find(m=>m.id===b.dataset.edit); tab="add"; render();
+    document.querySelectorAll("nav.tabs button").forEach(x=>
+      x.setAttribute("aria-current", x.dataset.tab==="add"));
+  });
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
+    const m=meals.find(x=>x.id===b.dataset.del);
+    if(!confirm(`Delete ${m.meal_code} and its readings?`)) return;
+    const {error}=await sb.from("meals").delete().eq("id",m.id);
+    if(error) return toast("Couldn't delete: "+error.message);
+    await load(); toast("Deleted"); render();
+  });
+}
+
+async function importSeed(){
+  const btn=$("#seed"); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const rows=SEED.map(s=>{
+    const dt=new Date(s.when);
+    return {user_id:user.id, meal_code:s.meal_code, eaten_at:dt.toISOString(),
+      meal_type:s.meal_type, foods:s.foods, large_portion:s.large_portion,
+      any_symptoms:s.any_symptoms, onset_minutes:s.onset, duration_minutes:s.duration,
+      severity:s.severity, symptoms:s.symptoms, symptom_order:s.symptom_order,
+      sleep_quality:s.sleep, stress_level:s.stress, exercised:s.exercised, notes:s.notes};
+  });
+  const {data,error}=await sb.from("meals").insert(rows).select();
+  if(error){ btn.disabled=false; btn.textContent="Import earlier entries";
+    return toast("Import failed: "+error.message,4200); }
+  const m13=(data||[]).find(m=>m.meal_code==="M013");
+  if(m13){
+    const base=new Date(m13.eaten_at);
+    await sb.from("readings").insert([
+      {user_id:user.id,meal_id:m13.id,taken_at:new Date(base.getTime()+90*60000).toISOString(),
+       minutes_after_eating:90,blood_sugar:183,notes:"First check"},
+      {user_id:user.id,meal_id:m13.id,taken_at:new Date(base.getTime()+135*60000).toISOString(),
+       minutes_after_eating:135,blood_sugar:203,notes:"45 min later, no food in between"},
+    ]);
+  }
+  await load(); toast("Imported"); render();
+}
+
+/* ================= INSIGHTS ================= */
+function stats(){
+  const total=meals.length, sym=meals.filter(m=>m.any_symptoms);
+  const avg=(a)=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const has=(m,name)=> name==="Large portion" ? m.large_portion : autoTags(m.foods).includes(name);
+  const grid=Object.keys(TRIGGERS).concat(["Large portion"]).map(name=>({
+    name,
+    cells:SYMPTOMS.map(s=>{
+      const withS=meals.filter(m=>(m.symptoms||[]).includes(s));
+      if(!withS.length) return null;
+      const hit=withS.filter(m=>has(m,name)).length;
+      return {pct:hit/withS.length, hit, of:withS.length};
+    }),
+    base: total ? meals.filter(m=>has(m,name)).length/total : 0,
+    baseN: meals.filter(m=>has(m,name)).length,
+  }));
+  return {total, symCount:sym.length,
+    pct: total? sym.length/total : 0,
+    onset: avg(sym.map(m=>m.onset_minutes).filter(v=>v!=null)),
+    sev: avg(sym.map(m=>m.severity).filter(v=>v!=null)),
+    counts: SYMPTOMS.map(s=>meals.filter(m=>(m.symptoms||[]).includes(s)).length),
+    grid,
+    bgAll: readings.map(r=>r.blood_sugar).filter(v=>v!=null),
+  };
+}
+
+function viewInsights(){
+  const s=stats();
+  if(!s.total){ app.innerHTML=`<h2 class="sec">Insights</h2>
+    <div class="empty"><p>Log a few meals and this fills in.</p></div>`; return; }
+  const pc=v=>v==null?"—":Math.round(v*100)+"%";
+  const thin = s.symCount<8;
+  app.innerHTML=`
+    <h2 class="sec">Insights</h2>
+    <p class="sub">Built from ${s.total} meals and ${readings.length} readings.</p>
+    ${thin?`<div class="warn">Only ${s.symCount} symptom meal${s.symCount===1?"":"s"} so far. Percentages below will swing wildly until there are more — treat them as placeholders, not findings.</div>`:""}
+
+    <div class="card">
+      <div class="stat"><span>Meals logged</span><b>${s.total}</b></div>
+      <div class="stat"><span>Meals with symptoms</span><b>${s.symCount}</b></div>
+      <div class="stat"><span>Share with symptoms</span><b>${pc(s.pct)}</b></div>
+      <div class="stat"><span>Typical onset</span><b>${s.onset==null?"—":Math.round(s.onset)+" min"}</b></div>
+      <div class="stat"><span>Typical severity</span><b>${s.sev==null?"—":s.sev.toFixed(1)}</b></div>
+    </div>
+
+    <h2 class="sec">What was in those meals</h2>
+    <p class="sub">Read down a symptom column, then compare across to that row's All meals figure on the right.</p>
+    <div class="card" style="padding:14px 16px">
+      <div class="gridwrap"><table class="matrix">
+        <thead><tr><th class="rowh"></th>${SYMPTOMS.map(x=>`<th>${x.replace("/"," / ")}</th>`).join("")}<th class="basecol">All meals</th></tr></thead>
+        <tbody>
+          <tr class="count"><th class="rowh">Meals with it</th>${s.counts.map(c=>`<td>${c}</td>`).join("")}<td>${s.total}</td></tr>
+          ${s.grid.map(rw=>`<tr><th class="rowh">${rw.name}</th>${rw.cells.map(c=>{
+            if(c==null) return `<td class="v">—</td>`;
+            const lift = c.pct - rw.base;
+            const solid = c.hit>=3;                       // needs real meals behind it
+            const cls = solid&&lift>=0.25 ? "hi" : (solid&&lift>=0.12 ? "mid" : "");
+            return `<td class="v ${cls}">${Math.round(c.pct*100)}%<small>${c.hit}/${c.of}</small></td>`;
+          }).join("")}<td class="v basecol">${Math.round(rw.base*100)}%<small>${rw.baseN}/${s.total}</small></td></tr>`).join("")}
+        </tbody></table></div>
+      <p class="legend">Each cell shows the share, with the actual meal counts beneath it. A cell is highlighted only when it sits well above that row's <b>All meals</b> figure <em>and</em> rests on at least 3 meals. Nothing highlighted means nothing has separated from noise yet.</p>
+    </div>
+
+    ${s.bgAll.length?`
+    <h2 class="sec">Blood sugar</h2>
+    <div class="card">
+      <div class="stat"><span>Readings</span><b>${s.bgAll.length}</b></div>
+      <div class="stat"><span>Range</span><b>${Math.min(...s.bgAll)}–${Math.max(...s.bgAll)}</b></div>
+      <div class="stat"><span>Average</span><b>${Math.round(s.bgAll.reduce((a,b)=>a+b,0)/s.bgAll.length)}</b></div>
+    </div>`:""}
+
+    <h2 class="sec">For your appointment</h2>
+    <div class="card">
+      <button class="btn ghost sm" id="csv1">Download meals CSV</button><div style="height:8px"></div>
+      <button class="btn ghost sm" id="csv2">Download readings CSV</button><div style="height:8px"></div>
+      <button class="btn sm" id="print">Print summary</button>
+    </div>
+    <div style="height:26px"></div>`;
+  $("#csv1").onclick=()=>csvMeals();
+  $("#csv2").onclick=()=>csvReadings();
+  $("#print").onclick=()=>printSummary();
+}
+
+/* ================= EXPORT ================= */
+function dl(name,text){
+  const b=new Blob([text],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast("Downloaded "+name);
+}
+const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+function csvMeals(){
+  const head=["Meal","Date","Time","Type","Foods","Large portion","Symptoms?","Onset (min)",
+    "Duration (min)","Severity","Symptoms","Order","Sleep","Stress","Exercised","Notes",
+    ...Object.keys(TRIGGERS)];
+  const rows=[...meals].reverse().map(m=>{
+    const t=autoTags(m.foods), d=new Date(m.eaten_at);
+    return [m.meal_code,d.toLocaleDateString(),d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
+      m.meal_type,m.foods,m.large_portion?"Y":"N",m.any_symptoms?"Y":"N",m.onset_minutes,
+      m.duration_minutes,m.severity,(m.symptoms||[]).join("; "),m.symptom_order,
+      m.sleep_quality,m.stress_level,m.exercised?"Y":"N",m.notes,
+      ...Object.keys(TRIGGERS).map(k=>t.includes(k)?"Y":"N")].map(q).join(",");
+  });
+  dl("meals.csv",[head.map(q).join(","),...rows].join("\n"));
+}
+function csvReadings(){
+  const head=["Meal","Meal foods","Date","Time","Minutes after eating","Blood sugar","Pulse",
+    "BP systolic","BP diastolic","Meal had symptoms","Notes"];
+  const rows=readings.map(r=>{
+    const m=meals.find(x=>x.id===r.meal_id)||{}, d=new Date(r.taken_at);
+    return [m.meal_code,m.foods,d.toLocaleDateString(),
+      d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
+      r.minutes_after_eating,r.blood_sugar,r.pulse,r.bp_systolic,r.bp_diastolic,
+      m.any_symptoms?"Y":"N",r.notes].map(q).join(",");
+  });
+  dl("readings.csv",[head.map(q).join(","),...rows].join("\n"));
+}
+
+function printSummary(){
+  const s=stats(), pc=v=>v==null?"—":Math.round(v*100)+"%";
+  const span = meals.length
+    ? `${new Date(meals[meals.length-1].eaten_at).toLocaleDateString()} – ${new Date(meals[0].eaten_at).toLocaleDateString()}`
+    : "—";
+  const symMeals=[...meals].reverse().filter(m=>m.any_symptoms);
+  $("#printroot").innerHTML=`
+    <h1>Symptom Log — summary</h1>
+    <div class="meta">${span} &middot; ${s.total} meals, ${s.symCount} with symptoms &middot; printed ${new Date().toLocaleDateString()}</div>
+
+    <div class="kv">
+      <div>Meals logged<br><b>${s.total}</b></div>
+      <div>With symptoms<br><b>${s.symCount} (${pc(s.pct)})</b></div>
+      <div>Typical onset<br><b>${s.onset==null?"—":Math.round(s.onset)+" min"}</b></div>
+      <div>Typical severity<br><b>${s.sev==null?"—":s.sev.toFixed(1)+" / 5"}</b></div>
+    </div>
+
+    <h2>Symptom frequency</h2>
+    <table><tr><th>Symptom</th><th>Meals</th></tr>
+      ${SYMPTOMS.map((x,i)=>`<tr><td>${x}</td><td>${s.counts[i]}</td></tr>`).join("")}</table>
+
+    <h2>Food factors in symptom meals</h2>
+    <table>
+      <tr><th>Factor</th>${SYMPTOMS.map((x,i)=>`<th>${x}<br>(n=${s.counts[i]})</th>`).join("")}<th>All meals<br>(n=${s.total})</th></tr>
+      ${s.grid.map(rw=>`<tr><td>${rw.name}</td>${rw.cells.map(c=>
+        `<td>${c==null?"—":Math.round(c.pct*100)+"% <small>("+c.hit+"/"+c.of+")</small>"}</td>`).join("")}<td>${Math.round(rw.base*100)}% <small>(${rw.baseN}/${s.total})</small></td></tr>`).join("")}
+    </table>
+
+    ${readings.length?`<h2>Readings</h2>
+    <table><tr><th>Meal</th><th>Date</th><th>Min after eating</th><th>Blood sugar</th><th>Pulse</th><th>BP</th></tr>
+      ${readings.map(r=>{const m=meals.find(x=>x.id===r.meal_id)||{};
+        return `<tr><td>${m.meal_code||"—"}</td><td>${new Date(r.taken_at).toLocaleDateString()}</td>
+        <td>${r.minutes_after_eating??"—"}</td><td>${r.blood_sugar??"—"}</td><td>${r.pulse??"—"}</td>
+        <td>${r.bp_systolic?`${r.bp_systolic}/${r.bp_diastolic??"?"}`:"—"}</td></tr>`}).join("")}
+    </table>`:""}
+
+    <h2>Symptom episodes in detail</h2>
+    <table>
+      <tr><th>Meal</th><th>Date / time</th><th>Foods</th><th>Symptoms</th><th>Onset</th><th>Sev</th><th>Notes</th></tr>
+      ${symMeals.map(m=>`<tr>
+        <td>${m.meal_code}</td>
+        <td>${new Date(m.eaten_at).toLocaleDateString()}<br>${fmtTime(m.eaten_at)}</td>
+        <td>${esc(m.foods)}</td>
+        <td>${(m.symptoms||[]).join(", ")||"—"}</td>
+        <td>${m.onset_minutes!=null?m.onset_minutes+"m":"—"}</td>
+        <td>${m.severity??"—"}</td>
+        <td>${esc([m.symptom_order,m.notes].filter(Boolean).join(" — "))}</td></tr>`).join("")}
+    </table>`;
+  window.print();
+}
+
+/* ================= shell ================= */
+function render(){
+  if(tab==="add") viewAdd();
+  else if(tab==="entries") viewEntries();
+  else if(tab==="reading") viewReading();
+  else viewInsights();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-current",x===b));
+  if(b.dataset.tab!=="add") editing=null;
+  tab=b.dataset.tab; render();
+});
+
+/* auth */
+function authMsg(t,cls="err"){ $("#authmsg").innerHTML = t?`<div class="msg ${cls}">${esc(t)}</div>`:"" }
+$("#signin").onclick=async()=>{
+  authMsg("");
+  const {error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});
+  if(error) authMsg(error.message);
+};
+$("#signup").onclick=async()=>{
+  authMsg("");
+  const email=$("#em").value.trim(), password=$("#pw").value;
+  if(!email||password.length<6) return authMsg("Enter an email and a password of at least 6 characters.");
+  const {data,error}=await sb.auth.signUp({email,password});
+  if(error) return authMsg(error.message);
+  if(data.session) return;
+  authMsg("Account created. Check your email to confirm, then sign in.","ok");
+};
+$("#signout").onclick=()=>sb.auth.signOut();
+
+async function boot(session){
+  if(session){
+    user=session.user;
+    $("#uemail").textContent=user.email;
+    $("#authview").classList.add("hidden");
+    $("#shell").classList.remove("hidden");
+    await load();
+    if(!meals.length && SEED.length){ tab="entries"; 
+      document.querySelectorAll("nav.tabs button").forEach(x=>
+        x.setAttribute("aria-current", x.dataset.tab==="entries")); }
+    render();
+  }else{
+    user=null; meals=[]; readings=[];
+    $("#shell").classList.add("hidden");
+    $("#authview").classList.remove("hidden");
+  }
+}
+sb.auth.onAuthStateChange((_e,session)=>boot(session));
+sb.auth.getSession().then(({data})=>boot(data.session));
+</script>
+</body>
+</html>
