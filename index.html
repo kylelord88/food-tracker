@@ -418,17 +418,6 @@ async function load(){
   meals=res.meals; readings=res.readings; loadError=res.error;
 }
 
-// RLS is scoped to authenticated, so a query issued before the token is attached
-// returns zero rows with no error — indistinguishable from an empty account.
-// Wait for the session to actually be present before trusting an empty result.
-async function waitForSession(tries=8){
-  for(let i=0;i<tries;i++){
-    const {data} = await sb.auth.getSession();
-    if(data?.session?.access_token) return data.session;
-    await new Promise(r=>setTimeout(r, 120));
-  }
-  return null;
-}
 const readingsFor = id => readings.filter(x=>x.meal_id===id)
   .sort((a,b)=>(a.minutes_after_eating??0)-(b.minutes_after_eating??0));
 
@@ -1073,39 +1062,55 @@ $("#signup").onclick=async()=>{
 };
 $("#signout").onclick=()=>sb.auth.signOut();
 
-let bootSeq=0;
+let bootSeq=0, painted=false;
 async function boot(session){
   const seq = ++bootSeq;
-  if(session){
-    user=session.user;
-    $("#uemail").textContent=user.email;
-    $("#authview").classList.add("hidden");
-    $("#shell").classList.remove("hidden");
-    if(!meals.length) app.innerHTML=`<div class="empty"><p><span class="spin"
-      style="border-color:rgba(0,0,0,.15);border-top-color:var(--teal)"></span> Loading your entries…</p></div>`;
-    await waitForSession();            // don't query before the token exists
-    if(seq !== bootSeq) return;        // a newer boot took over
-    await load();
-    if(seq !== bootSeq) return;
-    if(!meals.length && !loadError){ tab="entries";
-      document.querySelectorAll("nav.tabs button").forEach(x=>
-        x.setAttribute("aria-current", x.dataset.tab==="entries")); }
-    render();
-  }else{
-    if(seq !== bootSeq) return;
-    user=null; meals=[]; readings=[];
+  if(!session){
+    user=null; meals=[]; readings=[]; painted=false;
     $("#shell").classList.add("hidden");
     $("#authview").classList.remove("hidden");
+    return;
   }
+  user=session.user;
+  $("#uemail").textContent=user.email;
+  $("#authview").classList.add("hidden");
+  $("#shell").classList.remove("hidden");
+  if(!painted){
+    app.innerHTML=`<div class="empty"><p><span class="spin"
+      style="border-color:rgba(0,0,0,.15);border-top-color:var(--teal)"></span>
+      Loading your entries…</p></div>`;
+  }
+  await load();
+  // A newer boot supersedes this one only once something is actually on screen.
+  if(seq !== bootSeq && painted) return;
+  if(!meals.length && !loadError) tab="entries";
+  document.querySelectorAll("nav.tabs button").forEach(x=>
+    x.setAttribute("aria-current", x.dataset.tab===tab));
+  render();
+  painted = true;
 }
-sb.auth.onAuthStateChange((_e,session)=>boot(session));
-sb.auth.getSession()
-  .then(({data})=>boot(data.session))
-  .catch(err=>{
+
+let sawAuthEvent=false;
+sb.auth.onAuthStateChange((event,session)=>{
+  sawAuthEvent=true;
+  // Token refreshes don't change what's displayed; re-booting on them
+  // just cancels whatever load is in flight.
+  if(painted && session && (event==="TOKEN_REFRESHED" || event==="USER_UPDATED")) return;
+  boot(session);
+});
+
+// Fallback only if no auth event ever arrives (older clients don't emit INITIAL_SESSION).
+setTimeout(async()=>{
+  if(sawAuthEvent) return;
+  try{
+    const {data}=await sb.auth.getSession();
+    boot(data?.session||null);
+  }catch(err){
     console.error("Symptom Log — auth check failed:", err);
-    document.getElementById("shell").classList.remove("hidden");
+    $("#shell").classList.remove("hidden");
     app.innerHTML=errorPanel("Couldn't check whether you're signed in.",(err&&err.message)||String(err));
-  });
+  }
+}, 700);
 </script>
 </body>
 </html>
