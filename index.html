@@ -359,9 +359,6 @@ function autoTags(text){
   return out;
 }
 
-/* ---------------- seed ---------------- */
-const SEED = [{"meal_code": "M001", "when": "2026-08-22T13:30", "meal_type": "Lunch", "foods": "Leftover Mexican: Chicken and cheese empanada and 2 chicken Enchiladas with red sauce", "large_portion": false, "any_symptoms": true, "onset": 30, "symptoms": ["Urgent bowel movement"], "symptom_order": "Bothered my stomach. I didnt have a bowel movement but felt like i needed to", "duration": 30, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M002", "when": "2026-08-22T17:30", "meal_type": "Dinner", "foods": "Chick-fil-a two breaded schicken sandwiches, Waffle Fries, Lemonade", "large_portion": true, "any_symptoms": true, "onset": 60, "symptoms": ["Racing heart", "Urgent bowel movement", "Fatigue"], "symptom_order": "Racing Heart, then bowel movement, then tired", "duration": 60, "severity": 4, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M003", "when": "2026-08-22T22:45", "meal_type": "Snack", "foods": "chicken salad with light mayo and saltines", "large_portion": false, "any_symptoms": true, "onset": 85, "symptoms": ["Racing heart"], "symptom_order": "Racing heart", "duration": null, "severity": 2, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M004", "when": "2026-08-23T09:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Strawberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M005", "when": "2026-08-23T13:10", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": true, "onset": 45, "symptoms": ["Urgent bowel movement"], "symptom_order": "Urgent diarrhea ", "duration": 20, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M006", "when": "2026-08-23T17:45", "meal_type": "Dinner", "foods": "Pesto Margarita pizza with grilled chicken and a lemon sparkling water", "large_portion": true, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M007", "when": "2026-08-23T21:45", "meal_type": "Snack", "foods": "Ben & Jerrys non-dairy ice cream", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M008", "when": "2026-08-24T20:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M009", "when": "2026-08-24T13:00", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M010", "when": "2026-08-23T18:00", "meal_type": "Dinner", "foods": "Flounder with lemon garlic sauce. Brown rice, Brocolli, and a Lemon Sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M011", "when": "2026-08-25T08:50", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M012", "when": "2026-08-25T13:00", "meal_type": "Lunch", "foods": "Ham and cheese sandwich and kettle chips. Lemon sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M013", "when": "2026-08-25T17:00", "meal_type": "Dinner", "foods": "chicken sandwich with goat cheese and basil aoili and roasted red peppers. Vodka cocktail", "large_portion": false, "any_symptoms": true, "onset": 60, "symptoms": ["Shakiness", "Fatigue"], "symptom_order": "after an hour and a half my blood sugar was 183 i checked again 45 minutes to an hour later and it had gone up to 203 without eating again ", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}];
-
 /* ---------------- state ---------------- */
 let user=null, meals=[], readings=[], tab="add", editing=null;
 let openMeal=null, showMore=false;
@@ -393,15 +390,44 @@ function nextCode(){
 }
 
 /* ---------------- data ---------------- */
+let loadError=null, loadSeq=0;
+
+// Fetch without committing, so a stale in-flight request can't clobber fresh data.
+async function fetchData(){
+  try{
+    const [m,r] = await Promise.all([
+      sb.from("meals").select("*").order("eaten_at",{ascending:false}),
+      sb.from("readings").select("*").order("taken_at",{ascending:true}),
+    ]);
+    if(m.error) throw m.error;
+    if(r.error) throw r.error;
+    return {
+      meals:(m.data||[]).map(x=>({...x, symptoms:normSymptoms(x.symptoms)})),
+      readings:r.data||[], error:null,
+    };
+  }catch(err){
+    console.error("Symptom Log — load failed:", err);
+    return {meals:[], readings:[], error: err?.message || String(err)};
+  }
+}
+
 async function load(){
-  const [m,r] = await Promise.all([
-    sb.from("meals").select("*").order("eaten_at",{ascending:false}),
-    sb.from("readings").select("*").order("taken_at",{ascending:true}),
-  ]);
-  if(m.error) toast("Couldn't load meals: "+m.error.message);
-  if(r.error) toast("Couldn't load readings: "+r.error.message);
-  meals=(m.data||[]).map(x=>({...x, symptoms:normSymptoms(x.symptoms)}));
-  readings=r.data||[];
+  const seq = ++loadSeq;
+  const res = await fetchData();
+  if(seq !== loadSeq) return;          // superseded by a newer load
+  meals=res.meals; readings=res.readings; loadError=res.error;
+}
+
+// RLS is scoped to authenticated, so a query issued before the token is attached
+// returns zero rows with no error — indistinguishable from an empty account.
+// Wait for the session to actually be present before trusting an empty result.
+async function waitForSession(tries=8){
+  for(let i=0;i<tries;i++){
+    const {data} = await sb.auth.getSession();
+    if(data?.session?.access_token) return data.session;
+    await new Promise(r=>setTimeout(r, 120));
+  }
+  return null;
 }
 const readingsFor = id => readings.filter(x=>x.meal_id===id)
   .sort((a,b)=>(a.minutes_after_eating??0)-(b.minutes_after_eating??0));
@@ -695,9 +721,9 @@ function anyFilters(){ return filt.sym.size+filt.trig.size+filt.read.size > 0; }
 function viewEntries(){
   if(!meals.length){
     app.innerHTML=`<h2 class="sec">Entries</h2>
-      <div class="empty"><p>Nothing logged yet.</p>
-      ${SEED.length?`<button class="btn ghost" id="seed">Import my ${SEED.length} earlier entries</button>`:""}</div>`;
-    if($("#seed")) $("#seed").onclick=importSeed;
+      <div class="empty"><p>No meals logged yet. Every meal counts here, symptoms or not.</p>
+      <button class="btn ghost" id="goadd">Log your first meal</button></div>`;
+    $("#goadd").onclick=()=>document.querySelector('[data-tab=add]').click();
     return;
   }
 
@@ -822,32 +848,6 @@ function viewEntries(){
     if(error) return toast("Couldn't delete: "+error.message);
     openMeal=null; await load(); toast("Deleted"); render();
   });
-}
-
-async function importSeed(){
-  const btn=$("#seed"); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
-  const rows=SEED.map(s=>{
-    const dt=new Date(s.when);
-    return {user_id:user.id, meal_code:s.meal_code, eaten_at:dt.toISOString(),
-      meal_type:s.meal_type, foods:s.foods, large_portion:s.large_portion,
-      any_symptoms:s.any_symptoms, onset_minutes:s.onset, duration_minutes:s.duration,
-      severity:s.severity, symptoms:s.symptoms, symptom_order:s.symptom_order,
-      sleep_quality:s.sleep, stress_level:s.stress, exercised:s.exercised, notes:s.notes};
-  });
-  const {data,error}=await sb.from("meals").insert(rows).select();
-  if(error){ btn.disabled=false; btn.textContent="Import earlier entries";
-    return toast("Import failed: "+error.message,4200); }
-  const m13=(data||[]).find(m=>m.meal_code==="M013");
-  if(m13){
-    const base=new Date(m13.eaten_at);
-    await sb.from("readings").insert([
-      {user_id:user.id,meal_id:m13.id,taken_at:new Date(base.getTime()+90*60000).toISOString(),
-       minutes_after_eating:90,blood_sugar:183,notes:"First check"},
-      {user_id:user.id,meal_id:m13.id,taken_at:new Date(base.getTime()+135*60000).toISOString(),
-       minutes_after_eating:135,blood_sugar:203,notes:"45 min later, no food in between"},
-    ]);
-  }
-  await load(); toast("Imported"); render();
 }
 
 /* ================= INSIGHTS ================= */
@@ -1020,11 +1020,33 @@ function printSummary(){
 }
 
 /* ================= shell ================= */
+function errorPanel(msg,detail){
+  return `<h2 class="sec">Something went wrong</h2>
+    <div class="card" style="border-color:#E0C4C4">
+      <p style="margin:0 0 10px;font-size:15px">${esc(msg)}</p>
+      ${detail?`<p style="margin:0 0 14px;font-family:var(--mono);font-size:12px;color:var(--muted);
+        word-break:break-word">${esc(detail)}</p>`:""}
+      <button class="btn ghost sm" id="retry">Try again</button>
+    </div>`;
+}
 function render(){
-  if(tab==="add") viewAdd();
-  else if(tab==="entries") viewEntries();
-  else if(tab==="reading") viewReading();
-  else viewInsights();
+  try{
+    if(loadError){
+      app.innerHTML=errorPanel(
+        "Couldn't reach your data. Your entries are safe on the server — this is a connection problem.",
+        loadError);
+      $("#retry").onclick=async()=>{ await load(); render(); };
+      return;
+    }
+    if(tab==="add") viewAdd();
+    else if(tab==="entries") viewEntries();
+    else if(tab==="reading") viewReading();
+    else viewInsights();
+  }catch(err){
+    console.error("Symptom Log — render failed on tab:", tab, err);
+    app.innerHTML=errorPanel("This screen hit an error while drawing.", (err&&err.message)||String(err));
+    $("#retry").onclick=()=>render();
+  }
   window.scrollTo(0,0);
 }
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{
@@ -1051,25 +1073,39 @@ $("#signup").onclick=async()=>{
 };
 $("#signout").onclick=()=>sb.auth.signOut();
 
+let bootSeq=0;
 async function boot(session){
+  const seq = ++bootSeq;
   if(session){
     user=session.user;
     $("#uemail").textContent=user.email;
     $("#authview").classList.add("hidden");
     $("#shell").classList.remove("hidden");
+    if(!meals.length) app.innerHTML=`<div class="empty"><p><span class="spin"
+      style="border-color:rgba(0,0,0,.15);border-top-color:var(--teal)"></span> Loading your entries…</p></div>`;
+    await waitForSession();            // don't query before the token exists
+    if(seq !== bootSeq) return;        // a newer boot took over
     await load();
-    if(!meals.length && SEED.length){ tab="entries"; 
+    if(seq !== bootSeq) return;
+    if(!meals.length && !loadError){ tab="entries";
       document.querySelectorAll("nav.tabs button").forEach(x=>
         x.setAttribute("aria-current", x.dataset.tab==="entries")); }
     render();
   }else{
+    if(seq !== bootSeq) return;
     user=null; meals=[]; readings=[];
     $("#shell").classList.add("hidden");
     $("#authview").classList.remove("hidden");
   }
 }
 sb.auth.onAuthStateChange((_e,session)=>boot(session));
-sb.auth.getSession().then(({data})=>boot(data.session));
+sb.auth.getSession()
+  .then(({data})=>boot(data.session))
+  .catch(err=>{
+    console.error("Symptom Log — auth check failed:", err);
+    document.getElementById("shell").classList.remove("hidden");
+    app.innerHTML=errorPanel("Couldn't check whether you're signed in.",(err&&err.message)||String(err));
+  });
 </script>
 </body>
 </html>
