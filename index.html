@@ -156,6 +156,70 @@ table.matrix tr.base th,table.matrix tr.base td{color:var(--muted);font-size:11.
 .warn{background:var(--amber-wash);border-left:3px solid var(--amber);padding:11px 13px;
   border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:13.5px;color:#6B4A12;margin-bottom:14px}
 
+/* symptom summary */
+.sumcard{padding:14px 14px 8px}
+.sumhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:9px;border-bottom:1px solid var(--hair);margin-bottom:4px}
+.sumhead span{text-transform:none;letter-spacing:0;font-size:11px;opacity:.85}
+.srow{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;
+  padding:9px 4px;cursor:pointer;text-align:left;border-radius:7px}
+.srow .sname{flex:none;width:118px;font-size:14px}
+.srow .sbar{flex:1;height:7px;background:#EDF1EE;border-radius:99px;overflow:hidden}
+.srow .sbar i{display:block;height:100%;background:var(--plum);border-radius:99px}
+.srow .scount{flex:none;width:22px;text-align:right;font-family:var(--mono);font-size:14px;font-weight:600}
+.srow.on{background:var(--plum);color:#fff}
+.srow.on .sbar{background:rgba(255,255,255,.3)}
+.srow.on .sbar i{background:#fff}
+.srow.zero{opacity:.42;cursor:default}
+.srow.zero .scount{font-weight:400}
+
+/* filters */
+.morebtn{width:100%;background:none;border:1.5px solid var(--hair);border-radius:var(--r-sm);
+  padding:11px;font-size:14px;color:var(--ink-2);cursor:pointer;margin:12px 0 0}
+.morebox{margin-top:12px}
+.fgroup{margin-bottom:14px}
+.flabel{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:7px}
+.fchip{padding:8px 12px;border:1.5px solid var(--hair);border-radius:999px;background:var(--surface);
+  font-size:13.5px;cursor:pointer;color:var(--ink-2)}
+.fchip b{font-family:var(--mono);font-weight:600;opacity:.6;margin-left:2px}
+.fchip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.fchip.on b{opacity:.8}
+.fbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0 4px;
+  padding:10px 13px;background:var(--teal-wash);border-radius:var(--r-sm);font-size:13.5px;
+  color:var(--teal-ink)}
+.fbar b{font-family:var(--mono)}
+.fbar button{background:none;border:0;color:var(--teal-ink);text-decoration:underline;
+  text-underline-offset:2px;font-size:13px;cursor:pointer;padding:0;flex:none}
+
+/* entry rows */
+.elist{margin-top:16px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r);overflow:hidden}
+.elist .dayhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);background:var(--surface-2);padding:7px 13px;border-bottom:1px solid var(--hair);
+  margin:0;position:sticky;top:0;z-index:2}
+.erow{border-bottom:1px solid #EDF1EE}
+.erow:last-child{border-bottom:0}
+.erow.sym{box-shadow:inset 3px 0 0 var(--plum)}
+.erow.open{background:var(--surface-2)}
+.ehead{display:flex;gap:10px;align-items:baseline;width:100%;background:none;border:0;
+  padding:11px 13px 3px;text-align:left;cursor:pointer}
+.etime{flex:none;width:56px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.efood{flex:1;min-width:0;font-size:14.5px;line-height:1.35;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.erow.open .efood{white-space:normal}
+.ebits{display:flex;flex-wrap:wrap;gap:4px;padding:0 13px 11px 79px}
+.mc{font-size:11.5px;background:var(--plum-wash);color:var(--plum);padding:3px 8px;
+  border-radius:999px;font-weight:500}
+.mm{font-size:11.5px;background:var(--surface-2);color:var(--ink-2);padding:3px 8px;border-radius:999px}
+.erow.open .mm{background:#E7ECE8}
+.mm.bg{background:var(--amber-wash);color:#7A5214}
+.edet{padding:2px 13px 14px 13px;border-top:1px dashed var(--hair);margin-top:2px}
+.efull{font-size:14.5px;margin:12px 0 10px;line-height:1.45}
+.ekv{font-size:13.5px;margin:0 0 7px;color:var(--ink-2);line-height:1.45}
+.ekv b{color:var(--ink);font-weight:600}
+
 /* nav */
 nav.tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);
   backdrop-filter:blur(9px);border-top:1px solid var(--hair);display:flex;
@@ -257,8 +321,12 @@ const SUPABASE_KEY = "sb_publishable_RS8NgZt1QKoPb7uFa9jj1Q_S4Qq9anY";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ---------------- reference data ---------------- */
-const SYMPTOMS = ["Racing heart","Urgency/BM","Sweating","Shakiness",
-                  "Lightheaded","Bloating/Cramping","Nausea","Tired/Fatigued"];
+const SYMPTOMS = ["Racing heart","Urgent bowel movement","Sweating","Shakiness",
+                  "Lightheaded","Bloating or cramping","Nausea","Fatigue"];
+// Older entries were saved with shorthand labels; show them under the plain names.
+const SYMPTOM_ALIASES = {"Urgency/BM":"Urgent bowel movement","Tired/Fatigued":"Fatigue",
+                         "Bloating/Cramping":"Bloating or cramping"};
+const normSymptoms = a => (a||[]).map(s=>SYMPTOM_ALIASES[s]||s);
 
 const TRIGGERS = {
   "Caffeine":["coffee","espresso","latte","cappuccino","mocha","matcha","chai","cola","coke",
@@ -292,10 +360,12 @@ function autoTags(text){
 }
 
 /* ---------------- seed ---------------- */
-const SEED = [{"meal_code": "M001", "when": "2026-08-22T13:30", "meal_type": "Lunch", "foods": "Leftover Mexican: Chicken and cheese empanada and 2 chicken Enchiladas with red sauce", "large_portion": false, "any_symptoms": true, "onset": 30, "symptoms": ["Urgency/BM"], "symptom_order": "Bothered my stomach. I didnt have a bowel movement but felt like i needed to", "duration": 30, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M002", "when": "2026-08-22T17:30", "meal_type": "Dinner", "foods": "Chick-fil-a two breaded schicken sandwiches, Waffle Fries, Lemonade", "large_portion": true, "any_symptoms": true, "onset": 60, "symptoms": ["Racing heart", "Urgency/BM", "Tired/Fatigued"], "symptom_order": "Racing Heart, then bowel movement, then tired", "duration": 60, "severity": 4, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M003", "when": "2026-08-22T22:45", "meal_type": "Snack", "foods": "chicken salad with light mayo and saltines", "large_portion": false, "any_symptoms": true, "onset": 85, "symptoms": ["Racing heart"], "symptom_order": "Racing heart", "duration": null, "severity": 2, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M004", "when": "2026-08-23T09:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Strawberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M005", "when": "2026-08-23T13:10", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": true, "onset": 45, "symptoms": ["Urgency/BM"], "symptom_order": "Urgent diarrhea ", "duration": 20, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M006", "when": "2026-08-23T17:45", "meal_type": "Dinner", "foods": "Pesto Margarita pizza with grilled chicken and a lemon sparkling water", "large_portion": true, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M007", "when": "2026-08-23T21:45", "meal_type": "Snack", "foods": "Ben & Jerrys non-dairy ice cream", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M008", "when": "2026-08-24T20:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M009", "when": "2026-08-24T13:00", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M010", "when": "2026-08-23T18:00", "meal_type": "Dinner", "foods": "Flounder with lemon garlic sauce. Brown rice, Brocolli, and a Lemon Sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M011", "when": "2026-08-25T08:50", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M012", "when": "2026-08-25T13:00", "meal_type": "Lunch", "foods": "Ham and cheese sandwich and kettle chips. Lemon sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M013", "when": "2026-08-25T17:00", "meal_type": "Dinner", "foods": "chicken sandwich with goat cheese and basil aoili and roasted red peppers. Vodka cocktail", "large_portion": false, "any_symptoms": true, "onset": 60, "symptoms": ["Shakiness", "Tired/Fatigued"], "symptom_order": "after an hour and a half my blood sugar was 183 i checked again 45 minutes to an hour later and it had gone up to 203 without eating again ", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}];
+const SEED = [{"meal_code": "M001", "when": "2026-08-22T13:30", "meal_type": "Lunch", "foods": "Leftover Mexican: Chicken and cheese empanada and 2 chicken Enchiladas with red sauce", "large_portion": false, "any_symptoms": true, "onset": 30, "symptoms": ["Urgent bowel movement"], "symptom_order": "Bothered my stomach. I didnt have a bowel movement but felt like i needed to", "duration": 30, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M002", "when": "2026-08-22T17:30", "meal_type": "Dinner", "foods": "Chick-fil-a two breaded schicken sandwiches, Waffle Fries, Lemonade", "large_portion": true, "any_symptoms": true, "onset": 60, "symptoms": ["Racing heart", "Urgent bowel movement", "Fatigue"], "symptom_order": "Racing Heart, then bowel movement, then tired", "duration": 60, "severity": 4, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M003", "when": "2026-08-22T22:45", "meal_type": "Snack", "foods": "chicken salad with light mayo and saltines", "large_portion": false, "any_symptoms": true, "onset": 85, "symptoms": ["Racing heart"], "symptom_order": "Racing heart", "duration": null, "severity": 2, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M004", "when": "2026-08-23T09:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Strawberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M005", "when": "2026-08-23T13:10", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": true, "onset": 45, "symptoms": ["Urgent bowel movement"], "symptom_order": "Urgent diarrhea ", "duration": 20, "severity": 3, "sleep": 4, "stress": 2, "exercised": false, "notes": ""}, {"meal_code": "M006", "when": "2026-08-23T17:45", "meal_type": "Dinner", "foods": "Pesto Margarita pizza with grilled chicken and a lemon sparkling water", "large_portion": true, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M007", "when": "2026-08-23T21:45", "meal_type": "Snack", "foods": "Ben & Jerrys non-dairy ice cream", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M008", "when": "2026-08-24T20:45", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M009", "when": "2026-08-24T13:00", "meal_type": "Lunch", "foods": "Chicken salad sandwich with kettle chips", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M010", "when": "2026-08-23T18:00", "meal_type": "Dinner", "foods": "Flounder with lemon garlic sauce. Brown rice, Brocolli, and a Lemon Sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M011", "when": "2026-08-25T08:50", "meal_type": "Breakfast", "foods": "Greek Yogurt (Vanilla Honey) with Granola, Blueberries, and Raspberries. One cup of coffee", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M012", "when": "2026-08-25T13:00", "meal_type": "Lunch", "foods": "Ham and cheese sandwich and kettle chips. Lemon sparkling water", "large_portion": false, "any_symptoms": false, "onset": null, "symptoms": [], "symptom_order": "", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}, {"meal_code": "M013", "when": "2026-08-25T17:00", "meal_type": "Dinner", "foods": "chicken sandwich with goat cheese and basil aoili and roasted red peppers. Vodka cocktail", "large_portion": false, "any_symptoms": true, "onset": 60, "symptoms": ["Shakiness", "Fatigue"], "symptom_order": "after an hour and a half my blood sugar was 183 i checked again 45 minutes to an hour later and it had gone up to 203 without eating again ", "duration": null, "severity": null, "sleep": null, "stress": null, "exercised": false, "notes": ""}];
 
 /* ---------------- state ---------------- */
 let user=null, meals=[], readings=[], tab="add", editing=null;
+let openMeal=null, showMore=false;
+const filt={sym:new Set(), trig:new Set(), read:new Set()};
 
 const $ = s=>document.querySelector(s);
 const app = $("#app");
@@ -330,7 +400,8 @@ async function load(){
   ]);
   if(m.error) toast("Couldn't load meals: "+m.error.message);
   if(r.error) toast("Couldn't load readings: "+r.error.message);
-  meals=m.data||[]; readings=r.data||[];
+  meals=(m.data||[]).map(x=>({...x, symptoms:normSymptoms(x.symptoms)}));
+  readings=r.data||[];
 }
 const readingsFor = id => readings.filter(x=>x.meal_id===id)
   .sort((a,b)=>(a.minutes_after_eating??0)-(b.minutes_after_eating??0));
@@ -342,7 +413,7 @@ function viewAdd(){
   const sy = e? (e.symptoms||[]) : [];
   app.innerHTML = `
     <h2 class="sec">${e?"Edit meal":"New meal"}</h2>
-    <p class="sub">${e? esc(e.meal_code) : nextCode()} &middot; every meal counts, symptoms or not.</p>
+    <p class="sub">Every meal counts &mdash; symptoms or not.</p>
 
     <div class="card">
       <div class="row field">
@@ -514,7 +585,7 @@ function viewReading(){
       <div class="field">
         <label class="fl" for="r_meal">After which meal</label>
         <select id="r_meal">
-          ${recent.map(m=>`<option value="${m.id}">${esc(m.meal_code)} · ${fmtDay(m.eaten_at)} ${fmtTime(m.eaten_at)} — ${esc(m.foods.slice(0,42))}${m.foods.length>42?"…":""}</option>`).join("")}
+          ${recent.map(m=>`<option value="${m.id}">${fmtDay(m.eaten_at)} ${fmtTime(m.eaten_at)}${m.meal_type?" "+esc(m.meal_type):""} — ${esc(m.foods.slice(0,44))}${m.foods.length>44?"…":""}</option>`).join("")}
         </select>
       </div>
       <div class="row field">
@@ -597,6 +668,30 @@ function trace(rs){
     </svg></div>`;
 }
 
+const TRIGGER_NAMES = Object.keys(TRIGGERS).concat(["Large portion"]);
+function mealFactors(m){
+  const t = autoTags(m.foods);
+  if(m.large_portion) t.push("Large portion");
+  return t;
+}
+function bgSeries(id){ return readingsFor(id).filter(r=>r.blood_sugar!=null); }
+function bgRose(id){ const s=bgSeries(id); return s.length>1 && s[s.length-1].blood_sugar>s[0].blood_sugar; }
+
+const READING_FILTERS = {
+  "Blood sugar recorded": m => bgSeries(m.id).length>0,
+  "Blood sugar went up":  m => bgRose(m.id),
+  "Pulse recorded":       m => readingsFor(m.id).some(r=>r.pulse!=null),
+  "Blood pressure recorded": m => readingsFor(m.id).some(r=>r.bp_systolic!=null),
+};
+
+function matchesFilters(m){
+  if(filt.sym.size && !(m.symptoms||[]).some(s=>filt.sym.has(s))) return false;
+  if(filt.trig.size){ const f=mealFactors(m); if(!f.some(x=>filt.trig.has(x))) return false; }
+  if(filt.read.size && ![...filt.read].some(k=>READING_FILTERS[k](m))) return false;
+  return true;
+}
+function anyFilters(){ return filt.sym.size+filt.trig.size+filt.read.size > 0; }
+
 function viewEntries(){
   if(!meals.length){
     app.innerHTML=`<h2 class="sec">Entries</h2>
@@ -605,38 +700,116 @@ function viewEntries(){
     if($("#seed")) $("#seed").onclick=importSeed;
     return;
   }
+
+  const symCount = s => meals.filter(m=>(m.symptoms||[]).includes(s)).length;
+  const counts = SYMPTOMS.map(symCount);
+  const maxCount = Math.max(1,...counts);
+  const shown = meals.filter(matchesFilters);
+
+  const symRows = SYMPTOMS.map((s,i)=>{
+    const n=counts[i], on=filt.sym.has(s);
+    return `<button class="srow${n?"":" zero"}${on?" on":""}" data-sym="${esc(s)}" ${n?"":"disabled"}
+             aria-pressed="${on}">
+      <span class="sname">${esc(s)}</span>
+      <span class="sbar"><i style="width:${n? Math.max(6,(n/maxCount)*100):0}%"></i></span>
+      <span class="scount">${n}</span></button>`;
+  }).join("");
+
+  const trigChips = TRIGGER_NAMES.map(t=>{
+    const n=meals.filter(m=>mealFactors(m).includes(t)).length;
+    if(!n) return "";
+    return `<button class="fchip${filt.trig.has(t)?" on":""}" data-trig="${esc(t)}"
+             aria-pressed="${filt.trig.has(t)}">${esc(t)} <b>${n}</b></button>`;
+  }).join("");
+
+  const readChips = Object.keys(READING_FILTERS).map(k=>{
+    const n=meals.filter(READING_FILTERS[k]).length;
+    if(!n) return "";
+    return `<button class="fchip${filt.read.has(k)?" on":""}" data-read="${esc(k)}"
+             aria-pressed="${filt.read.has(k)}">${esc(k)} <b>${n}</b></button>`;
+  }).join("");
+
   const groups={};
-  meals.forEach(m=>{(groups[fmtDay(m.eaten_at)] ||= []).push(m)});
-  app.innerHTML=`<h2 class="sec">Entries</h2>
-    <p class="sub">${meals.length} meals &middot; ${readings.length} readings</p>` +
-    Object.entries(groups).map(([day,ms])=>`
-      <div class="daygroup"><div class="dayhead">${day}</div>
-      ${ms.map(m=>{
-        const rs=readingsFor(m.id), tags=autoTags(m.foods);
-        return `<div class="meal ${m.any_symptoms?"sym":""}">
-          <div class="meal-top">
-            <span class="mcode">${esc(m.meal_code)}${m.meal_type?" · "+esc(m.meal_type):""}</span>
-            <span class="mtime">${fmtTime(m.eaten_at)}</span>
-          </div>
-          <p class="mfood">${esc(m.foods)}</p>
-          ${tags.length?`<div class="autotags">${tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`:""}
-          ${(m.symptoms||[]).length||m.any_symptoms?`<div class="symrow">
-            ${(m.symptoms||[]).map(s=>`<span class="pill">${esc(s)}</span>`).join("")}
-            ${m.onset_minutes!=null?`<span class="pill meta">+${m.onset_minutes} min</span>`:""}
-            ${m.severity!=null?`<span class="pill meta">sev ${m.severity}</span>`:""}
-          </div>`:""}
+  shown.forEach(m=>{(groups[fmtDay(m.eaten_at)] ||= []).push(m)});
+
+  const list = Object.entries(groups).map(([day,ms])=>`
+    <div class="dayhead">${day}</div>
+    ${ms.map(m=>{
+      const open = openMeal===m.id;
+      const rs=readingsFor(m.id), bs=bgSeries(m.id);
+      const bits=[];
+      (m.symptoms||[]).forEach(s=>bits.push(`<span class="mc">${esc(s)}</span>`));
+      if(m.onset_minutes!=null) bits.push(`<span class="mm">started +${m.onset_minutes} min</span>`);
+      if(m.severity!=null) bits.push(`<span class="mm">severity ${m.severity} of 5</span>`);
+      if(bs.length>1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar} → ${bs[bs.length-1].blood_sugar}</span>`);
+      else if(bs.length===1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar}</span>`);
+      return `<div class="erow${m.any_symptoms?" sym":""}${open?" open":""}">
+        <button class="ehead" data-open="${m.id}" aria-expanded="${open}">
+          <span class="etime">${fmtTime(m.eaten_at)}</span>
+          <span class="efood">${esc(m.foods)}</span>
+        </button>
+        ${bits.length?`<div class="ebits">${bits.join("")}</div>`:""}
+        ${open?`<div class="edet">
+          <p class="efull">${esc(m.foods)}</p>
+          ${m.meal_type?`<p class="ekv"><b>Meal</b> ${esc(m.meal_type)}${m.large_portion?" · large portion":""}</p>`:""}
+          ${mealFactors(m).length?`<div class="autotags">${mealFactors(m).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
+          ${m.symptom_order?`<p class="ekv"><b>What happened</b> ${esc(m.symptom_order)}</p>`:""}
+          ${m.duration_minutes!=null?`<p class="ekv"><b>Lasted</b> ${m.duration_minutes} min</p>`:""}
+          ${m.sleep_quality!=null?`<p class="ekv"><b>Sleep the night before</b> ${m.sleep_quality} of 5</p>`:""}
+          ${m.stress_level!=null?`<p class="ekv"><b>Stress that day</b> ${m.stress_level} of 5</p>`:""}
+          ${m.notes?`<p class="ekv"><b>Notes</b> ${esc(m.notes)}</p>`:""}
           ${trace(rs)}
           ${rs.filter(r=>r.pulse!=null||r.bp_systolic!=null).map(r=>
-            `<div class="symrow"><span class="pill meta">${r.minutes_after_eating??0}m${
-              r.pulse!=null?` · ${r.pulse} bpm`:""}${
-              r.bp_systolic!=null?` · ${r.bp_systolic}/${r.bp_diastolic??"?"}`:""}</span></div>`).join("")}
-          ${m.notes?`<p class="sub" style="margin:9px 0 0;font-size:13px">${esc(m.notes)}</p>`:""}
+            `<p class="ekv"><b>${r.minutes_after_eating??0} min after eating</b> ${
+              [r.pulse!=null?r.pulse+" bpm":"", r.bp_systolic!=null?`${r.bp_systolic}/${r.bp_diastolic??"?"} mmHg`:""]
+              .filter(Boolean).join(" · ")}</p>`).join("")}
           <div class="mactions">
             <button data-edit="${m.id}">Edit</button>
             <button data-del="${m.id}">Delete</button>
-          </div></div>`}).join("")}
-      </div>`).join("");
+          </div></div>`:""}
+      </div>`}).join("")}`).join("");
 
+  app.innerHTML=`
+    <h2 class="sec">Entries</h2>
+    <p class="sub">${meals.length} meals logged &middot; ${readings.length} readings taken</p>
+
+    <div class="card sumcard">
+      <div class="sumhead">Symptoms so far <span>tap to filter</span></div>
+      ${symRows}
+    </div>
+
+    <button class="morebtn" id="more" aria-expanded="${showMore}">
+      ${showMore?"Fewer filters":"More filters"}</button>
+    <div class="morebox${showMore?"":" hidden"}">
+      ${trigChips?`<div class="fgroup"><div class="flabel">What was in the meal</div>
+        <div class="chips">${trigChips}</div></div>`:""}
+      ${readChips?`<div class="fgroup"><div class="flabel">Readings</div>
+        <div class="chips">${readChips}</div></div>`:""}
+    </div>
+
+    ${anyFilters()?`<div class="fbar">
+      <span>Showing <b>${shown.length}</b> of ${meals.length} meals</span>
+      <button id="clearf">Clear filters</button></div>`:""}
+
+    <div class="elist">${shown.length?list:`<div class="empty"><p>No meals match those filters.</p></div>`}</div>
+    <div style="height:26px"></div>`;
+
+  app.querySelectorAll("[data-sym]").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.sym; filt.sym.has(v)?filt.sym.delete(v):filt.sym.add(v); viewEntries();
+  });
+  app.querySelectorAll("[data-trig]").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.trig; filt.trig.has(v)?filt.trig.delete(v):filt.trig.add(v); viewEntries();
+  });
+  app.querySelectorAll("[data-read]").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.read; filt.read.has(v)?filt.read.delete(v):filt.read.add(v); viewEntries();
+  });
+  if($("#more")) $("#more").onclick=()=>{ showMore=!showMore; viewEntries(); };
+  if($("#clearf")) $("#clearf").onclick=()=>{
+    filt.sym.clear(); filt.trig.clear(); filt.read.clear(); viewEntries();
+  };
+  app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
+    openMeal = openMeal===b.dataset.open ? null : b.dataset.open; viewEntries();
+  });
   app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
     editing=meals.find(m=>m.id===b.dataset.edit); tab="add"; render();
     document.querySelectorAll("nav.tabs button").forEach(x=>
@@ -644,10 +817,10 @@ function viewEntries(){
   });
   app.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{
     const m=meals.find(x=>x.id===b.dataset.del);
-    if(!confirm(`Delete ${m.meal_code} and its readings?`)) return;
+    if(!confirm(`Delete this meal and its readings?\n\n${fmtDay(m.eaten_at)} ${fmtTime(m.eaten_at)} — ${m.foods}`)) return;
     const {error}=await sb.from("meals").delete().eq("id",m.id);
     if(error) return toast("Couldn't delete: "+error.message);
-    await load(); toast("Deleted"); render();
+    openMeal=null; await load(); toast("Deleted"); render();
   });
 }
 
@@ -770,12 +943,12 @@ function dl(name,text){
 }
 const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
 function csvMeals(){
-  const head=["Meal","Date","Time","Type","Foods","Large portion","Symptoms?","Onset (min)",
+  const head=["Date","Time","Type","Foods","Large portion","Symptoms?","Onset (min)",
     "Duration (min)","Severity","Symptoms","Order","Sleep","Stress","Exercised","Notes",
     ...Object.keys(TRIGGERS)];
   const rows=[...meals].reverse().map(m=>{
     const t=autoTags(m.foods), d=new Date(m.eaten_at);
-    return [m.meal_code,d.toLocaleDateString(),d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
+    return [d.toLocaleDateString(),d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
       m.meal_type,m.foods,m.large_portion?"Y":"N",m.any_symptoms?"Y":"N",m.onset_minutes,
       m.duration_minutes,m.severity,(m.symptoms||[]).join("; "),m.symptom_order,
       m.sleep_quality,m.stress_level,m.exercised?"Y":"N",m.notes,
@@ -784,12 +957,12 @@ function csvMeals(){
   dl("meals.csv",[head.map(q).join(","),...rows].join("\n"));
 }
 function csvReadings(){
-  const head=["Meal","Meal foods","Date","Time","Minutes after eating","Blood sugar","Pulse",
+  const head=["Date","Time","Meal eaten","Minutes after eating","Blood sugar","Pulse",
     "BP systolic","BP diastolic","Meal had symptoms","Notes"];
   const rows=readings.map(r=>{
     const m=meals.find(x=>x.id===r.meal_id)||{}, d=new Date(r.taken_at);
-    return [m.meal_code,m.foods,d.toLocaleDateString(),
-      d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
+    return [d.toLocaleDateString(),
+      d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),m.foods,
       r.minutes_after_eating,r.blood_sugar,r.pulse,r.bp_systolic,r.bp_diastolic,
       m.any_symptoms?"Y":"N",r.notes].map(q).join(",");
   });
@@ -825,18 +998,17 @@ function printSummary(){
     </table>
 
     ${readings.length?`<h2>Readings</h2>
-    <table><tr><th>Meal</th><th>Date</th><th>Min after eating</th><th>Blood sugar</th><th>Pulse</th><th>BP</th></tr>
+    <table><tr><th>Date</th><th>Meal eaten</th><th>Min after eating</th><th>Blood sugar</th><th>Pulse</th><th>BP</th></tr>
       ${readings.map(r=>{const m=meals.find(x=>x.id===r.meal_id)||{};
-        return `<tr><td>${m.meal_code||"—"}</td><td>${new Date(r.taken_at).toLocaleDateString()}</td>
+        return `<tr><td>${new Date(r.taken_at).toLocaleDateString()}</td><td>${esc((m.foods||"—").slice(0,44))}</td>
         <td>${r.minutes_after_eating??"—"}</td><td>${r.blood_sugar??"—"}</td><td>${r.pulse??"—"}</td>
         <td>${r.bp_systolic?`${r.bp_systolic}/${r.bp_diastolic??"?"}`:"—"}</td></tr>`}).join("")}
     </table>`:""}
 
     <h2>Symptom episodes in detail</h2>
     <table>
-      <tr><th>Meal</th><th>Date / time</th><th>Foods</th><th>Symptoms</th><th>Onset</th><th>Sev</th><th>Notes</th></tr>
+      <tr><th>Date / time</th><th>Foods</th><th>Symptoms</th><th>Onset</th><th>Sev</th><th>Notes</th></tr>
       ${symMeals.map(m=>`<tr>
-        <td>${m.meal_code}</td>
         <td>${new Date(m.eaten_at).toLocaleDateString()}<br>${fmtTime(m.eaten_at)}</td>
         <td>${esc(m.foods)}</td>
         <td>${(m.symptoms||[]).join(", ")||"—"}</td>
