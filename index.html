@@ -230,8 +230,15 @@ table.matrix tr.base th,table.matrix tr.base td{color:var(--muted);font-size:11.
 .erow:last-child{border-bottom:0}
 .erow.sym{box-shadow:inset 3px 0 0 var(--plum)}
 .erow.open{background:var(--surface-2)}
-.ehead{display:flex;gap:10px;align-items:baseline;width:100%;background:none;border:0;
-  padding:11px 13px 3px;text-align:left;cursor:pointer}
+.ehead{display:flex;align-items:center;gap:6px;padding:11px 13px 3px}
+.eheadmain{display:flex;gap:10px;align-items:baseline;flex:1;min-width:0;background:none;border:0;
+  padding:0;text-align:left;cursor:pointer}
+.addsym{flex:none;width:25px;height:25px;border-radius:50%;border:1.5px solid var(--hair);
+  background:var(--surface-2);color:var(--ink-2);font-size:16px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0}
+.addsym[aria-pressed=true]{background:var(--plum);border-color:var(--plum);color:#fff}
+.quickadd{padding:2px 13px 12px 79px}
+.quickadd .flabel{margin-bottom:7px}
 .etime{flex:none;width:56px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .efood{flex:1;min-width:0;font-size:14.5px;line-height:1.35;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -388,7 +395,7 @@ function autoTags(text){
 
 /* ---------------- state ---------------- */
 let user=null, meals=[], readings=[], tab="add", editing=null;
-let openMeal=null, showMore=false;
+let openMeal=null, showMore=false, quickAddFor=null;
 let symState={}; // symptom name -> {onset, duration, severity}, for the meal being added/edited
 const filt={sym:new Set(), trig:new Set(), read:new Set()};
 
@@ -857,6 +864,28 @@ function matchesFilters(m){
 }
 function anyFilters(){ return filt.sym.size+filt.trig.size+filt.read.size > 0; }
 
+// One-tap symptom logging from the entries list: onset defaults to right now,
+// severity/duration are left for the full edit form to fill in.
+async function addSymptomToMeal(m, name){
+  if(!m) return;
+  const onset=Math.max(0, Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000));
+  const events=[...(m.symptom_events||[]), {name, onset_minutes:onset, duration_minutes:null, severity:null}]
+    .sort((a,b)=>a.onset_minutes-b.onset_minutes);
+  const sevs=events.map(ev=>ev.severity).filter(v=>v!=null);
+  const payload={
+    any_symptoms:true,
+    symptoms:[...new Set([...(m.symptoms||[]), name])],
+    symptom_events:events,
+    onset_minutes:events[0].onset_minutes,
+    severity:sevs.length?Math.max(...sevs):null,
+  };
+  const {error}=await sb.from("meals").update(payload).eq("id",m.id);
+  if(error) return toast("Couldn't add: "+error.message);
+  quickAddFor=null; openMeal=m.id;
+  await load(); toast(`${name} added — edit the meal to set severity or duration`, 3200);
+  viewEntries();
+}
+
 function viewEntries(){
   if(!meals.length){
     app.innerHTML=`<h2 class="sec">Entries</h2>
@@ -909,11 +938,24 @@ function viewEntries(){
       if(ws!=null) bits.push(`<span class="mm">severity ${ws} of 5</span>`);
       if(bs.length>1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar} → ${bs[bs.length-1].blood_sugar}</span>`);
       else if(bs.length===1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar}</span>`);
+      const notYet = SYMPTOMS.filter(s=>!(m.symptoms||[]).includes(s));
       return `<div class="erow${m.any_symptoms?" sym":""}${open?" open":""}">
-        <button class="ehead" data-open="${m.id}" aria-expanded="${open}">
-          <span class="etime">${fmtTime(m.eaten_at)}</span>
-          <span class="efood">${esc(m.foods)}</span>
-        </button>
+        <div class="ehead">
+          <button class="eheadmain" data-open="${m.id}" aria-expanded="${open}">
+            <span class="etime">${fmtTime(m.eaten_at)}</span>
+            <span class="efood">${esc(m.foods)}</span>
+          </button>
+          <button class="addsym" data-quicksym="${m.id}" aria-pressed="${quickAddFor===m.id}"
+            aria-label="Log a symptom for this meal" title="Log a symptom">+</button>
+        </div>
+        ${quickAddFor===m.id?`<div class="quickadd">
+          <div class="flabel">Log a symptom &mdash; onset set to right now, edit later for details</div>
+          <div class="chips">
+            ${notYet.length ? notYet.map(s=>
+              `<button type="button" class="chip sym" data-addsym="${esc(s)}" data-meal="${m.id}">${esc(s)}</button>`).join("")
+              : `<span class="onsethint">Every symptom is already logged for this meal.</span>`}
+          </div>
+        </div>`:""}
         ${bits.length?`<div class="ebits">${bits.join("")}</div>`:""}
         ${open?`<div class="edet">
           <p class="efull">${esc(m.foods)}</p>
@@ -977,6 +1019,11 @@ function viewEntries(){
   app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{
     openMeal = openMeal===b.dataset.open ? null : b.dataset.open; viewEntries();
   });
+  app.querySelectorAll("[data-quicksym]").forEach(b=>b.onclick=()=>{
+    quickAddFor = quickAddFor===b.dataset.quicksym ? null : b.dataset.quicksym; viewEntries();
+  });
+  app.querySelectorAll("[data-addsym]").forEach(b=>b.onclick=()=>
+    addSymptomToMeal(meals.find(m=>m.id===b.dataset.meal), b.dataset.addsym));
   app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
     editing=meals.find(m=>m.id===b.dataset.edit); tab="add"; render();
     document.querySelectorAll("nav.tabs button").forEach(x=>
