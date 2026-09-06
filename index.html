@@ -75,15 +75,20 @@ input[type=number]{font-family:var(--mono)}
 .scale{display:flex;gap:6px}
 .scale .chip{flex:1;text-align:center;font-family:var(--mono);padding:11px 0}
 
-/* per-symptom onset rows */
+/* per-symptom detail cards (onset, duration, severity) */
 .onsethint{font-size:12.5px;color:var(--muted);margin:0 0 2px}
-.onsetrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:10px 0;border-bottom:1px solid var(--hair)}
-.onsetrow:last-child{border-bottom:0}
-.onsetname{font-size:14px;flex:1;min-width:0}
+.symcard{padding:11px 0;border-bottom:1px solid var(--hair)}
+.symcard:last-child{border-bottom:0}
+.symcard-h{font-size:14px;font-weight:600;margin-bottom:8px}
+.symcard-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.symcard-row:last-child{margin-bottom:0}
+.symcard-label{font-size:12px;color:var(--muted);width:56px;flex:none}
 .onsetinputs{display:flex;align-items:center;gap:5px;flex:none}
 .onsetinputs input{width:50px;padding:8px 4px;text-align:center;font-family:var(--mono)}
 .onsetsep{font-size:12px;color:var(--muted)}
+.sdur{width:64px;padding:8px 6px;text-align:center;font-family:var(--mono)}
+.sevscale{display:flex;gap:4px;flex:1}
+.sevscale .chip{flex:1;text-align:center;font-family:var(--mono);padding:8px 0;font-size:13px}
 
 /* toggle */
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -149,6 +154,7 @@ input[type=number]{font-family:var(--mono)}
 .tl-row.tl-meal{color:var(--muted)}
 .tl-row.tl-meal .tl-dot{background:var(--muted)}
 .tl-name{flex:1;min-width:0}
+.tl-meta{font-size:11px;color:var(--muted)}
 
 /* insights */
 .stat{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;
@@ -383,7 +389,7 @@ function autoTags(text){
 /* ---------------- state ---------------- */
 let user=null, meals=[], readings=[], tab="add", editing=null;
 let openMeal=null, showMore=false;
-let onsetState={}; // symptom name -> onset minutes-after-eating, for the meal being added/edited
+let symState={}; // symptom name -> {onset, duration, severity}, for the meal being added/edited
 const filt={sym:new Set(), trig:new Set(), read:new Set()};
 
 const $ = s=>document.querySelector(s);
@@ -420,11 +426,24 @@ function firstOnset(m){
   if(evs && evs.length) return Math.min(...evs.map(e=>e.onset_minutes??0));
   return m.onset_minutes;
 }
-// "Racing heart +5m, Nausea +40m" — falls back to the legacy free-text order for older entries.
+// Worst per-symptom severity for a meal, falling back to the legacy single severity field.
+function worstSeverity(m){
+  const evs=m.symptom_events;
+  if(evs && evs.length){
+    const sevs=evs.map(e=>e.severity).filter(v=>v!=null);
+    return sevs.length ? Math.max(...sevs) : null;
+  }
+  return m.severity;
+}
+// "Racing heart +5m (sev 4, 20min), Nausea +40m" — falls back to the legacy free-text order for older entries.
 function timelineText(m){
   if(m.symptom_events && m.symptom_events.length)
     return [...m.symptom_events].sort((a,b)=>a.onset_minutes-b.onset_minutes)
-      .map(ev=>`${ev.name} ${fmtOnset(ev.onset_minutes)}`).join(", ");
+      .map(ev=>{
+        const extra=[ev.severity!=null?`sev ${ev.severity}`:"", ev.duration_minutes!=null?`${ev.duration_minutes}min`:""]
+          .filter(Boolean).join(", ");
+        return `${ev.name} ${fmtOnset(ev.onset_minutes)}${extra?` (${extra})`:""}`;
+      }).join("; ");
   return m.symptom_order || "";
 }
 function nextCode(){
@@ -470,12 +489,15 @@ function viewAdd(){
   const e=editing, now=new Date();
   const d = e? new Date(e.eaten_at) : now;
   const sy = e? (e.symptoms||[]) : [];
-  // symptom name -> onset minutes-after-eating, seeded from the saved timeline (or the legacy
-  // single onset field for older entries), and left to fill in with the default as symptoms are added.
-  onsetState = {};
+  // symptom name -> {onset, duration, severity}, seeded from the saved timeline (or the legacy
+  // meal-level fields for older entries), and left to fill in with defaults as symptoms are added.
+  symState = {};
   if(e){
-    (e.symptom_events||[]).forEach(ev=>{ onsetState[ev.name]=ev.onset_minutes; });
-    sy.forEach(s=>{ if(!(s in onsetState)) onsetState[s] = e.onset_minutes??0; });
+    (e.symptom_events||[]).forEach(ev=>{
+      symState[ev.name] = {onset:ev.onset_minutes, duration:ev.duration_minutes??null, severity:ev.severity??null};
+    });
+    sy.forEach(s=>{ if(!(s in symState))
+      symState[s] = {onset:e.onset_minutes??0, duration:e.duration_minutes??null, severity:e.severity??null}; });
   }
   app.innerHTML = `
     <h2 class="sec">${e?"Edit meal":"New meal"}</h2>
@@ -516,20 +538,10 @@ function viewAdd(){
             ${SYMPTOMS.map(s=>`<button type="button" class="chip sym" data-v="${s}" aria-pressed="${sy.includes(s)}">${s}</button>`).join("")}
           </div>
         </div>
-        <div class="field">
-          <label class="fl">When each one started</label>
-          <p class="onsethint">Defaults to how long it's been since the meal &mdash; edit if it started earlier.</p>
-          <div id="onsetRows"></div>
-        </div>
-        <div class="field">
-          <label class="fl" for="f_dur">Lasted (min)</label>
-          <input type="number" id="f_dur" inputmode="numeric" placeholder="20" value="${e&&e.duration_minutes!=null?e.duration_minutes:""}">
-        </div>
         <div class="field" style="margin-bottom:0">
-          <label class="fl">Severity</label>
-          <div class="scale" id="f_sev">
-            ${[1,2,3,4,5].map(n=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${e&&e.severity===n}">${n}</button>`).join("")}
-          </div>
+          <label class="fl">Each symptom</label>
+          <p class="onsethint">Onset defaults to how long it's been since the meal &mdash; edit any of these.</p>
+          <div id="symDetails"></div>
         </div>
       </div>
     </div>
@@ -575,34 +587,59 @@ function viewAdd(){
     const dt=new Date(`${$("#f_date").value}T${$("#f_time").value||"12:00"}`);
     return isNaN(dt) ? 0 : Math.max(0, Math.round((Date.now()-dt.getTime())/60000));
   };
-  const renderOnsetRows=()=>{
+  const renderSymDetails=()=>{
     const names=[...document.querySelectorAll("#f_symp .chip[aria-pressed=true]")].map(c=>c.dataset.v);
-    names.forEach(n=>{ if(onsetState[n]==null) onsetState[n]=minutesSinceMeal(); });
-    $("#onsetRows").innerHTML = names.length ? names.map(n=>{
-      const mins=Math.max(0,onsetState[n]||0), h=Math.floor(mins/60), m=mins%60;
-      return `<div class="onsetrow" data-name="${esc(n)}">
-        <span class="onsetname">${esc(n)}</span>
-        <div class="onsetinputs">
-          <input type="number" class="oh" inputmode="numeric" min="0" value="${h}" aria-label="${esc(n)} onset hours">
-          <span class="onsetsep">h</span>
-          <input type="number" class="om" inputmode="numeric" min="0" max="59" value="${m}" aria-label="${esc(n)} onset minutes">
-          <span class="onsetsep">m</span>
-        </div></div>`;
-    }).join("") : `<p class="onsethint" style="margin:0">Pick a symptom above to set when it started.</p>`;
-    $("#onsetRows").querySelectorAll(".onsetrow").forEach(row=>{
-      const name=row.dataset.name;
-      const sync=()=>{
-        const h=parseInt(row.querySelector(".oh").value,10)||0;
-        const m=parseInt(row.querySelector(".om").value,10)||0;
-        onsetState[name]=Math.max(0,h*60+m);
+    names.forEach(n=>{ if(!symState[n]) symState[n]={onset:minutesSinceMeal(),duration:null,severity:null}; });
+    $("#symDetails").innerHTML = names.length ? names.map(n=>{
+      const st=symState[n], mins=Math.max(0,st.onset||0), h=Math.floor(mins/60), m=mins%60;
+      return `<div class="symcard" data-name="${esc(n)}">
+        <div class="symcard-h">${esc(n)}</div>
+        <div class="symcard-row">
+          <span class="symcard-label">Started</span>
+          <div class="onsetinputs">
+            <input type="number" class="oh" inputmode="numeric" min="0" value="${h}" aria-label="${esc(n)} onset hours">
+            <span class="onsetsep">h</span>
+            <input type="number" class="om" inputmode="numeric" min="0" max="59" value="${m}" aria-label="${esc(n)} onset minutes">
+            <span class="onsetsep">m</span>
+          </div>
+        </div>
+        <div class="symcard-row">
+          <span class="symcard-label">Lasted</span>
+          <input type="number" class="sdur" inputmode="numeric" placeholder="min" value="${st.duration!=null?st.duration:""}" aria-label="${esc(n)} duration in minutes">
+          <span class="onsetsep">min</span>
+        </div>
+        <div class="symcard-row">
+          <span class="symcard-label">Severity</span>
+          <div class="scale sevscale">
+            ${[1,2,3,4,5].map(v=>`<button type="button" class="chip" data-v="${v}" aria-pressed="${st.severity===v}">${v}</button>`).join("")}
+          </div>
+        </div>
+      </div>`;
+    }).join("") : `<p class="onsethint" style="margin:0">Pick a symptom above to set its details.</p>`;
+    $("#symDetails").querySelectorAll(".symcard").forEach(card=>{
+      const name=card.dataset.name;
+      const syncOnset=()=>{
+        const h=parseInt(card.querySelector(".oh").value,10)||0;
+        const m=parseInt(card.querySelector(".om").value,10)||0;
+        symState[name].onset=Math.max(0,h*60+m);
       };
-      row.querySelector(".oh").addEventListener("input",sync);
-      row.querySelector(".om").addEventListener("input",sync);
+      card.querySelector(".oh").addEventListener("input",syncOnset);
+      card.querySelector(".om").addEventListener("input",syncOnset);
+      card.querySelector(".sdur").addEventListener("input",e2=>{
+        const v=parseInt(e2.target.value,10);
+        symState[name].duration=Number.isFinite(v)?v:null;
+      });
+      card.querySelectorAll(".sevscale .chip").forEach(c=>c.onclick=()=>{
+        const on=c.getAttribute("aria-pressed")==="true";
+        c.parentElement.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+        c.setAttribute("aria-pressed", on?"false":"true");
+        symState[name].severity = on ? null : +c.dataset.v;
+      });
     });
   };
-  renderOnsetRows();
+  renderSymDetails();
 
-  document.querySelectorAll("#f_type .chip,#f_sev .chip,#f_sleep .chip,#f_stress .chip")
+  document.querySelectorAll("#f_type .chip,#f_sleep .chip,#f_stress .chip")
     .forEach(c=>c.onclick=()=>{
       const on=c.getAttribute("aria-pressed")==="true";
       c.parentElement.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
@@ -610,7 +647,7 @@ function viewAdd(){
     });
   document.querySelectorAll("#f_symp .chip").forEach(c=>c.onclick=()=>{
     c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")==="true"?"false":"true");
-    renderOnsetRows();
+    renderSymDetails();
   });
   ["f_big","f_ex"].forEach(id=>$("#"+id).onclick=e2=>
     e2.currentTarget.setAttribute("aria-pressed", e2.currentTarget.getAttribute("aria-pressed")==="true"?"false":"true"));
@@ -633,10 +670,17 @@ async function saveMeal(){
   const dt=new Date(`${$("#f_date").value}T${$("#f_time").value||"12:00"}`);
   if(isNaN(dt)) return toast("Check the date and time");
   const any=$("#f_any").getAttribute("aria-pressed")==="true";
-  const sev=pick("#f_sev"), slp=pick("#f_sleep"), str=pick("#f_stress");
+  const slp=pick("#f_sleep"), str=pick("#f_stress");
   const names=any?[...document.querySelectorAll("#f_symp .chip[aria-pressed=true]")].map(c=>c.dataset.v):[];
-  const symptomEvents=names.map(n=>({name:n, onset_minutes:Math.max(0,onsetState[n]||0)}))
-    .sort((a,b)=>a.onset_minutes-b.onset_minutes);
+  const symptomEvents=names.map(n=>{
+    const st=symState[n]||{};
+    return {name:n, onset_minutes:Math.max(0,st.onset||0),
+      duration_minutes:st.duration??null, severity:st.severity??null};
+  }).sort((a,b)=>a.onset_minutes-b.onset_minutes);
+  // Legacy meal-level fields, derived for backward-compatible sorting/exports:
+  // earliest onset, peak severity across symptoms, and the overall episode span.
+  const sevs=symptomEvents.map(ev=>ev.severity).filter(v=>v!=null);
+  const spanEnds=symptomEvents.filter(ev=>ev.duration_minutes!=null).map(ev=>ev.onset_minutes+ev.duration_minutes);
   const payload={
     user_id:user.id,
     eaten_at:dt.toISOString(),
@@ -645,8 +689,8 @@ async function saveMeal(){
     large_portion:$("#f_big").getAttribute("aria-pressed")==="true",
     any_symptoms:any,
     onset_minutes:symptomEvents.length?symptomEvents[0].onset_minutes:null,
-    duration_minutes:any?num($("#f_dur").value):null,
-    severity:any&&sev?+sev:null,
+    duration_minutes:spanEnds.length?Math.max(...spanEnds)-symptomEvents[0].onset_minutes:null,
+    severity:sevs.length?Math.max(...sevs):null,
     symptoms:names,
     symptom_events:symptomEvents,
     sleep_quality:slp?+slp:null,
@@ -773,11 +817,15 @@ function trace(rs){
 
 function timelineHTML(m){
   const evs=[...m.symptom_events].sort((a,b)=>a.onset_minutes-b.onset_minutes);
-  const rows=evs.map(ev=>`<div class="tl-row">
+  const rows=evs.map(ev=>{
+    const meta=[ev.severity!=null?`severity ${ev.severity} of 5`:"", ev.duration_minutes!=null?`lasted ${ev.duration_minutes} min`:""]
+      .filter(Boolean).join(" · ");
+    return `<div class="tl-row">
       <span class="tl-time">${fmtOnset(ev.onset_minutes)}</span>
       <span class="tl-dot"></span>
-      <span class="tl-name">${esc(ev.name)}</span>
-    </div>`).join("");
+      <span class="tl-name">${esc(ev.name)}${meta?`<br><span class="tl-meta">${esc(meta)}</span>`:""}</span>
+    </div>`;
+  }).join("");
   return `<div class="timeline">
     <div class="tl-h">Timeline</div>
     <div class="tl-row tl-meal"><span class="tl-time">0:00</span><span class="tl-dot"></span><span class="tl-name">Meal eaten</span></div>
@@ -856,9 +904,9 @@ function viewEntries(){
       const rs=readingsFor(m.id), bs=bgSeries(m.id);
       const bits=[];
       (m.symptoms||[]).forEach(s=>bits.push(`<span class="mc">${esc(s)}</span>`));
-      const fo=firstOnset(m);
+      const fo=firstOnset(m), ws=worstSeverity(m);
       if(fo!=null) bits.push(`<span class="mm">started ${fmtOnset(fo)}</span>`);
-      if(m.severity!=null) bits.push(`<span class="mm">severity ${m.severity} of 5</span>`);
+      if(ws!=null) bits.push(`<span class="mm">severity ${ws} of 5</span>`);
       if(bs.length>1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar} → ${bs[bs.length-1].blood_sugar}</span>`);
       else if(bs.length===1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar}</span>`);
       return `<div class="erow${m.any_symptoms?" sym":""}${open?" open":""}">
@@ -871,9 +919,9 @@ function viewEntries(){
           <p class="efull">${esc(m.foods)}</p>
           ${m.meal_type?`<p class="ekv"><b>Meal</b> ${esc(m.meal_type)}${m.large_portion?" · large portion":""}</p>`:""}
           ${mealFactors(m).length?`<div class="autotags">${mealFactors(m).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
-          ${(m.symptom_events&&m.symptom_events.length>1)?timelineHTML(m)
+          ${(m.symptom_events&&m.symptom_events.length)?timelineHTML(m)
             :(m.symptom_order?`<p class="ekv"><b>What happened</b> ${esc(m.symptom_order)}</p>`:"")}
-          ${m.duration_minutes!=null?`<p class="ekv"><b>Lasted</b> ${m.duration_minutes} min</p>`:""}
+          ${(!m.symptom_events||!m.symptom_events.length)&&m.duration_minutes!=null?`<p class="ekv"><b>Lasted</b> ${m.duration_minutes} min</p>`:""}
           ${m.sleep_quality!=null?`<p class="ekv"><b>Sleep the night before</b> ${m.sleep_quality} of 5</p>`:""}
           ${m.stress_level!=null?`<p class="ekv"><b>Stress that day</b> ${m.stress_level} of 5</p>`:""}
           ${m.notes?`<p class="ekv"><b>Notes</b> ${esc(m.notes)}</p>`:""}
@@ -962,7 +1010,7 @@ function stats(){
   return {total, symCount:sym.length,
     pct: total? sym.length/total : 0,
     onset: avg(sym.map(firstOnset).filter(v=>v!=null)),
-    sev: avg(sym.map(m=>m.severity).filter(v=>v!=null)),
+    sev: avg(sym.map(worstSeverity).filter(v=>v!=null)),
     counts: SYMPTOMS.map(s=>meals.filter(m=>(m.symptoms||[]).includes(s)).length),
     grid,
     bgAll: readings.map(r=>r.blood_sugar).filter(v=>v!=null),
@@ -1043,7 +1091,7 @@ function csvMeals(){
     const t=autoTags(m.foods), d=new Date(m.eaten_at);
     return [d.toLocaleDateString(),d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}),
       m.meal_type,m.foods,m.large_portion?"Y":"N",m.any_symptoms?"Y":"N",firstOnset(m),
-      m.duration_minutes,m.severity,(m.symptoms||[]).join("; "),timelineText(m),
+      m.duration_minutes,worstSeverity(m),(m.symptoms||[]).join("; "),timelineText(m),
       m.sleep_quality,m.stress_level,m.exercised?"Y":"N",m.notes,
       ...Object.keys(TRIGGERS).map(k=>t.includes(k)?"Y":"N")].map(q).join(",");
   });
@@ -1100,12 +1148,12 @@ function printSummary(){
 
     <h2>Symptom episodes in detail</h2>
     <table>
-      <tr><th>Date / time</th><th>Foods</th><th>Timeline</th><th>Sev</th><th>Notes</th></tr>
+      <tr><th>Date / time</th><th>Foods</th><th>Timeline</th><th>Peak sev</th><th>Notes</th></tr>
       ${symMeals.map(m=>`<tr>
         <td>${new Date(m.eaten_at).toLocaleDateString()}<br>${fmtTime(m.eaten_at)}</td>
         <td>${esc(m.foods)}</td>
         <td>${esc(timelineText(m))||"—"}</td>
-        <td>${m.severity??"—"}</td>
+        <td>${worstSeverity(m)??"—"}</td>
         <td>${esc(m.notes||"")}</td></tr>`).join("")}
     </table>`;
   window.print();
