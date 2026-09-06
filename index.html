@@ -395,7 +395,10 @@ function autoTags(text){
 
 /* ---------------- state ---------------- */
 let user=null, meals=[], readings=[], tab="add", editing=null;
-let openMeal=null, showMore=false, quickAddFor=null;
+let openMeal=null, showMore=false;
+let quickAddFor=null;     // meal id whose quick-add panel is open
+let quickAddSym=null;     // symptom picked within that panel, being detailed before save
+let quickAddDraft={onset:0,duration:null,severity:null};
 let symState={}; // symptom name -> {onset, duration, severity}, for the meal being added/edited
 const filt={sym:new Set(), trig:new Set(), read:new Set()};
 
@@ -864,12 +867,14 @@ function matchesFilters(m){
 }
 function anyFilters(){ return filt.sym.size+filt.trig.size+filt.read.size > 0; }
 
-// One-tap symptom logging from the entries list: onset defaults to right now,
-// severity/duration are left for the full edit form to fill in.
-async function addSymptomToMeal(m, name){
+// Quick-add symptom logging from the entries list: pick a symptom, then adjust its
+// onset/duration/severity (onset defaults to elapsed time since the meal) before saving.
+async function addSymptomToMeal(m, name, draft){
   if(!m) return;
-  const onset=Math.max(0, Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000));
-  const events=[...(m.symptom_events||[]), {name, onset_minutes:onset, duration_minutes:null, severity:null}]
+  const onset=draft&&draft.onset!=null ? draft.onset
+    : Math.max(0, Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000));
+  const events=[...(m.symptom_events||[]), {name, onset_minutes:onset,
+    duration_minutes:(draft&&draft.duration)??null, severity:(draft&&draft.severity)??null}]
     .sort((a,b)=>a.onset_minutes-b.onset_minutes);
   const sevs=events.map(ev=>ev.severity).filter(v=>v!=null);
   const payload={
@@ -881,9 +886,56 @@ async function addSymptomToMeal(m, name){
   };
   const {error}=await sb.from("meals").update(payload).eq("id",m.id);
   if(error) return toast("Couldn't add: "+error.message);
-  quickAddFor=null; openMeal=m.id;
-  await load(); toast(`${name} added — edit the meal to set severity or duration`, 3200);
+  quickAddFor=null; quickAddSym=null; openMeal=m.id;
+  await load(); toast(`${name} added`);
   viewEntries();
+}
+
+// Renders the entries-list quick-add panel for one meal: a symptom picker, then (once a
+// symptom is chosen) an inline editor for its onset/duration/severity before saving.
+function renderQuickAdd(m){
+  if(quickAddSym){
+    const mins=Math.max(0,quickAddDraft.onset||0), h=Math.floor(mins/60), mm=mins%60;
+    return `<div class="quickadd">
+      <div class="symcard" data-qacard style="padding-top:0">
+        <div class="symcard-h">${esc(quickAddSym)}</div>
+        <div class="symcard-row">
+          <span class="symcard-label">Started</span>
+          <div class="onsetinputs">
+            <input type="number" class="qa-oh" inputmode="numeric" min="0" value="${h}" aria-label="${esc(quickAddSym)} onset hours">
+            <span class="onsetsep">h</span>
+            <input type="number" class="qa-om" inputmode="numeric" min="0" max="59" value="${mm}" aria-label="${esc(quickAddSym)} onset minutes">
+            <span class="onsetsep">m</span>
+          </div>
+        </div>
+        <div class="symcard-row">
+          <span class="symcard-label">Lasted</span>
+          <input type="number" class="sdur qa-dur" inputmode="numeric" placeholder="min"
+            value="${quickAddDraft.duration!=null?quickAddDraft.duration:""}" aria-label="${esc(quickAddSym)} duration in minutes">
+          <span class="onsetsep">min</span>
+        </div>
+        <div class="symcard-row">
+          <span class="symcard-label">Severity</span>
+          <div class="scale sevscale qa-sev">
+            ${[1,2,3,4,5].map(v=>`<button type="button" class="chip" data-v="${v}" aria-pressed="${quickAddDraft.severity===v}">${v}</button>`).join("")}
+          </div>
+        </div>
+        <div class="mactions" style="margin-top:9px">
+          <button data-qacancel="1">Cancel</button>
+          <button data-qaconfirm="${m.id}" style="background:var(--plum);border-color:var(--plum);color:#fff">Log it</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const notYet=SYMPTOMS.filter(s=>!(m.symptoms||[]).includes(s));
+  return `<div class="quickadd">
+    <div class="flabel">Which symptom?</div>
+    <div class="chips">
+      ${notYet.length ? notYet.map(s=>
+        `<button type="button" class="chip sym" data-picksym="${esc(s)}" data-meal="${m.id}">${esc(s)}</button>`).join("")
+        : `<span class="onsethint">Every symptom is already logged for this meal.</span>`}
+    </div>
+  </div>`;
 }
 
 function viewEntries(){
@@ -938,7 +990,6 @@ function viewEntries(){
       if(ws!=null) bits.push(`<span class="mm">severity ${ws} of 5</span>`);
       if(bs.length>1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar} → ${bs[bs.length-1].blood_sugar}</span>`);
       else if(bs.length===1) bits.push(`<span class="mm bg">blood sugar ${bs[0].blood_sugar}</span>`);
-      const notYet = SYMPTOMS.filter(s=>!(m.symptoms||[]).includes(s));
       return `<div class="erow${m.any_symptoms?" sym":""}${open?" open":""}">
         <div class="ehead">
           <button class="eheadmain" data-open="${m.id}" aria-expanded="${open}">
@@ -948,14 +999,7 @@ function viewEntries(){
           <button class="addsym" data-quicksym="${m.id}" aria-pressed="${quickAddFor===m.id}"
             aria-label="Log a symptom for this meal" title="Log a symptom">+</button>
         </div>
-        ${quickAddFor===m.id?`<div class="quickadd">
-          <div class="flabel">Log a symptom &mdash; onset set to right now, edit later for details</div>
-          <div class="chips">
-            ${notYet.length ? notYet.map(s=>
-              `<button type="button" class="chip sym" data-addsym="${esc(s)}" data-meal="${m.id}">${esc(s)}</button>`).join("")
-              : `<span class="onsethint">Every symptom is already logged for this meal.</span>`}
-          </div>
-        </div>`:""}
+        ${quickAddFor===m.id?renderQuickAdd(m):""}
         ${bits.length?`<div class="ebits">${bits.join("")}</div>`:""}
         ${open?`<div class="edet">
           <p class="efull">${esc(m.foods)}</p>
@@ -1020,10 +1064,44 @@ function viewEntries(){
     openMeal = openMeal===b.dataset.open ? null : b.dataset.open; viewEntries();
   });
   app.querySelectorAll("[data-quicksym]").forEach(b=>b.onclick=()=>{
-    quickAddFor = quickAddFor===b.dataset.quicksym ? null : b.dataset.quicksym; viewEntries();
+    const id=b.dataset.quicksym;
+    quickAddFor = quickAddFor===id ? null : id;
+    quickAddSym=null; quickAddDraft={onset:0,duration:null,severity:null};
+    viewEntries();
   });
-  app.querySelectorAll("[data-addsym]").forEach(b=>b.onclick=()=>
-    addSymptomToMeal(meals.find(m=>m.id===b.dataset.meal), b.dataset.addsym));
+  app.querySelectorAll("[data-picksym]").forEach(b=>b.onclick=()=>{
+    const m=meals.find(x=>x.id===b.dataset.meal);
+    quickAddSym=b.dataset.picksym;
+    quickAddDraft={onset:Math.max(0,Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000)),
+      duration:null, severity:null};
+    viewEntries();
+  });
+  const qacard=app.querySelector("[data-qacard]");
+  if(qacard){
+    const syncOnset=()=>{
+      const h=parseInt(qacard.querySelector(".qa-oh").value,10)||0;
+      const m2=parseInt(qacard.querySelector(".qa-om").value,10)||0;
+      quickAddDraft.onset=Math.max(0,h*60+m2);
+    };
+    qacard.querySelector(".qa-oh").addEventListener("input",syncOnset);
+    qacard.querySelector(".qa-om").addEventListener("input",syncOnset);
+    qacard.querySelector(".qa-dur").addEventListener("input",e2=>{
+      const v=parseInt(e2.target.value,10);
+      quickAddDraft.duration=Number.isFinite(v)?v:null;
+    });
+    qacard.querySelectorAll(".qa-sev .chip").forEach(c=>c.onclick=()=>{
+      const on=c.getAttribute("aria-pressed")==="true";
+      c.parentElement.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+      c.setAttribute("aria-pressed", on?"false":"true");
+      quickAddDraft.severity = on ? null : +c.dataset.v;
+    });
+  }
+  app.querySelectorAll("[data-qacancel]").forEach(b=>b.onclick=()=>{
+    quickAddFor=null; quickAddSym=null; viewEntries();
+  });
+  app.querySelectorAll("[data-qaconfirm]").forEach(b=>b.onclick=()=>{
+    addSymptomToMeal(meals.find(m=>m.id===b.dataset.qaconfirm), quickAddSym, {...quickAddDraft});
+  });
   app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
     editing=meals.find(m=>m.id===b.dataset.edit); tab="add"; render();
     document.querySelectorAll("nav.tabs button").forEach(x=>
