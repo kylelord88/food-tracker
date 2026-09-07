@@ -152,7 +152,8 @@ input[type=number]{font-family:var(--mono)}
   color:var(--amber);margin-bottom:5px}
 .trace svg{display:block;width:100%;height:auto}
 .trace .pt{font-family:var(--mono);font-size:11px;font-weight:500;fill:var(--ink-2)}
-.trace .pt.tm{font-size:9.5px;fill:var(--amber);font-weight:400}
+.trace .pt.tm{font-size:9px;fill:var(--amber);font-weight:500}
+.trace .pt.tm.rel{font-size:8px;fill:var(--muted);font-weight:400}
 
 /* symptom timeline */
 .timeline{margin-top:11px;padding:11px 12px;background:var(--plum-wash);border-radius:var(--r-sm)}
@@ -867,7 +868,7 @@ async function saveReading(){
 function trace(rs){
   const pts=rs.filter(r=>r.blood_sugar!=null);
   if(pts.length<1) return "";
-  const VB_W=320, VB_H=76, PAD_X=30, PAD_T=20, PAD_B=17;
+  const VB_W=320, VB_H=86, PAD_X=30, PAD_T=20, PAD_B=27;
   const W=VB_W-PAD_X*2, H=VB_H-PAD_T-PAD_B;
   const xs=pts.map(p=>p.minutes_after_eating??0), ys=pts.map(p=>p.blood_sugar);
   const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
@@ -878,7 +879,8 @@ function trace(rs){
   const labs=pts.map(p=>{
     const x=sx(p.minutes_after_eating??0), y=sy(p.blood_sugar);
     return `<text class="pt" x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="middle">${p.blood_sugar}</text>
-            <text class="pt tm" x="${x.toFixed(1)}" y="${(VB_H-4).toFixed(1)}" text-anchor="middle">${p.minutes_after_eating??0}m</text>`;
+            <text class="pt tm" x="${x.toFixed(1)}" y="${(VB_H-17).toFixed(1)}" text-anchor="middle">${fmtTime(p.taken_at)}</text>
+            <text class="pt tm rel" x="${x.toFixed(1)}" y="${(VB_H-6).toFixed(1)}" text-anchor="middle">(${fmtOnset(p.minutes_after_eating??0)})</text>`;
   }).join("");
   const delta = pts.length>1 ? (pts[pts.length-1].blood_sugar-pts[0].blood_sugar) : null;
   return `<div class="trace">
