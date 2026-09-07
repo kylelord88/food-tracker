@@ -95,6 +95,10 @@ input[type=number]{font-family:var(--mono)}
 .sdur{width:64px;padding:8px 6px;text-align:center;font-family:var(--mono)}
 .sevscale{display:flex;gap:4px;flex:1}
 .sevscale .chip{flex:1;text-align:center;font-family:var(--mono);padding:8px 0;font-size:13px}
+.chip.addchip{border-style:dashed;color:var(--teal-ink);background:transparent}
+.symaddrow{display:flex;gap:8px;margin-top:9px}
+.symaddrow input{flex:1}
+.symaddrow button{flex:none}
 
 /* toggle */
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -374,6 +378,13 @@ const SYMPTOMS = ["Racing heart","Urgent bowel movement","Sweating","Shakiness",
 const SYMPTOM_ALIASES = {"Urgency/BM":"Urgent bowel movement","Tired/Fatigued":"Fatigue",
                          "Bloating/Cramping":"Bloating or cramping"};
 const normSymptoms = a => (a||[]).map(s=>SYMPTOM_ALIASES[s]||s);
+// The built-in list plus any custom symptom name anyone has ever logged — once used
+// once, a custom symptom shows up as an option everywhere from then on.
+function allSymptomNames(){
+  const set=new Set(SYMPTOMS);
+  meals.forEach(m=>(m.symptoms||[]).forEach(s=>{ if(s) set.add(s); }));
+  return [...set];
+}
 
 const TRIGGERS = {
   "Caffeine":["coffee","espresso","latte","cappuccino","mocha","matcha","chai","cola","coke",
@@ -412,7 +423,9 @@ let openMeal=null, showMore=false;
 let quickAddFor=null;     // meal id whose quick-add panel is open
 let quickAddSym=null;     // symptom picked within that panel, being detailed before save
 let quickAddDraft={onset:0,duration:null,severity:null};
+let quickAddCustomOpen=false; // whether the "type a symptom name" input is showing in that panel
 let symState={}; // symptom name -> {onset, duration, severity}, for the meal being added/edited
+let pendingCustomSymptoms=[]; // names typed via "+ Add" this session, not yet saved on any meal
 const filt={sym:new Set(), trig:new Set(), read:new Set()};
 
 const $ = s=>document.querySelector(s);
@@ -561,8 +574,10 @@ function viewAdd(){
       <div id="sympbox" class="${e&&e.any_symptoms?"":"hidden"}" style="padding-top:6px">
         <div class="field">
           <label class="fl">Which ones</label>
-          <div class="chips" id="f_symp">
-            ${SYMPTOMS.map(s=>`<button type="button" class="chip sym" data-v="${s}" aria-pressed="${sy.includes(s)}">${s}</button>`).join("")}
+          <div class="chips" id="f_symp"></div>
+          <div class="symaddrow hidden" id="f_symp_addrow">
+            <input type="text" id="f_symp_addinput" placeholder="Symptom name" maxlength="60">
+            <button type="button" class="btn sm" id="f_symp_addsave">Add</button>
           </div>
         </div>
         <div class="field" style="margin-bottom:0">
@@ -666,16 +681,44 @@ function viewAdd(){
   };
   renderSymDetails();
 
+  // Symptom chips, plus a "+ Add" chip for typing in one that isn't listed yet.
+  // A symptom added here becomes a permanent option app-wide the moment this meal is saved
+  // (allSymptomNames() picks up any name that has ever been logged).
+  const renderSymptomChips=()=>{
+    const selected=[...document.querySelectorAll("#f_symp .chip.sym[aria-pressed=true]")].map(c=>c.dataset.v);
+    const options=[...new Set([...allSymptomNames(), ...pendingCustomSymptoms])];
+    $("#f_symp").innerHTML = options.map(s=>
+      `<button type="button" class="chip sym" data-v="${esc(s)}" aria-pressed="${selected.includes(s)||sy.includes(s)}">${esc(s)}</button>`
+    ).join("") + `<button type="button" class="chip addchip" id="f_symp_addbtn">+ Add</button>`;
+    $("#f_symp").querySelectorAll(".chip.sym").forEach(c=>c.onclick=()=>{
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")==="true"?"false":"true");
+      renderSymDetails();
+    });
+    $("#f_symp_addbtn").onclick=()=>{
+      $("#f_symp_addrow").classList.remove("hidden");
+      $("#f_symp_addinput").value=""; $("#f_symp_addinput").focus();
+    };
+  };
+  const addCustomSymptom=()=>{
+    const name=$("#f_symp_addinput").value.trim();
+    if(!name) return;
+    const exists=[...allSymptomNames(), ...pendingCustomSymptoms].some(s=>s.toLowerCase()===name.toLowerCase());
+    if(!exists) pendingCustomSymptoms.push(name);
+    $("#f_symp_addrow").classList.add("hidden");
+    renderSymptomChips();
+    const chip=[...$("#f_symp").querySelectorAll(".chip.sym")].find(c=>c.dataset.v.toLowerCase()===name.toLowerCase());
+    if(chip && chip.getAttribute("aria-pressed")!=="true") chip.click();
+  };
+  renderSymptomChips();
+  $("#f_symp_addsave").onclick=addCustomSymptom;
+  $("#f_symp_addinput").addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); addCustomSymptom(); } });
+
   document.querySelectorAll("#f_type .chip,#f_sleep .chip,#f_stress .chip")
     .forEach(c=>c.onclick=()=>{
       const on=c.getAttribute("aria-pressed")==="true";
       c.parentElement.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
       c.setAttribute("aria-pressed", on?"false":"true");
     });
-  document.querySelectorAll("#f_symp .chip").forEach(c=>c.onclick=()=>{
-    c.setAttribute("aria-pressed", c.getAttribute("aria-pressed")==="true"?"false":"true");
-    renderSymDetails();
-  });
   ["f_big","f_ex"].forEach(id=>$("#"+id).onclick=e2=>
     e2.currentTarget.setAttribute("aria-pressed", e2.currentTarget.getAttribute("aria-pressed")==="true"?"false":"true"));
   $("#f_any").onclick=e2=>{
@@ -903,7 +946,7 @@ async function addSymptomToMeal(m, name, draft){
   };
   const {error}=await sb.from("meals").update(payload).eq("id",m.id);
   if(error) return toast("Couldn't add: "+error.message);
-  quickAddFor=null; quickAddSym=null; openMeal=m.id;
+  quickAddFor=null; quickAddSym=null; quickAddCustomOpen=false; openMeal=m.id;
   await load(); toast(`${name} added`);
   viewEntries();
 }
@@ -944,14 +987,18 @@ function renderQuickAdd(m){
       </div>
     </div>`;
   }
-  const notYet=SYMPTOMS.filter(s=>!(m.symptoms||[]).includes(s));
+  const notYet=allSymptomNames().filter(s=>!(m.symptoms||[]).includes(s));
   return `<div class="quickadd">
     <div class="flabel">Which symptom?</div>
     <div class="chips">
-      ${notYet.length ? notYet.map(s=>
-        `<button type="button" class="chip sym" data-picksym="${esc(s)}" data-meal="${m.id}">${esc(s)}</button>`).join("")
-        : `<span class="onsethint">Every symptom is already logged for this meal.</span>`}
+      ${notYet.map(s=>
+        `<button type="button" class="chip sym" data-picksym="${esc(s)}" data-meal="${m.id}">${esc(s)}</button>`).join("")}
+      <button type="button" class="chip addchip" data-qacustom="${m.id}">+ Add</button>
     </div>
+    ${quickAddCustomOpen?`<div class="symaddrow">
+      <input type="text" id="qa_custominput" placeholder="Symptom name" maxlength="60">
+      <button type="button" class="btn sm" data-qacustomsave="${m.id}">Add</button>
+    </div>`:""}
   </div>`;
 }
 
@@ -964,12 +1011,13 @@ function viewEntries(){
     return;
   }
 
+  const SYMS = allSymptomNames();
   const symCount = s => meals.filter(m=>(m.symptoms||[]).includes(s)).length;
-  const counts = SYMPTOMS.map(symCount);
+  const counts = SYMS.map(symCount);
   const maxCount = Math.max(1,...counts);
   const shown = meals.filter(matchesFilters);
 
-  const symRows = SYMPTOMS.map((s,i)=>{
+  const symRows = SYMS.map((s,i)=>{
     const n=counts[i], on=filt.sym.has(s);
     return `<button class="srow${n?"":" zero"}${on?" on":""}" data-sym="${esc(s)}" ${n?"":"disabled"}
              aria-pressed="${on}">
@@ -1088,7 +1136,7 @@ function viewEntries(){
     ev.stopPropagation();
     const id=b.dataset.quicksym;
     quickAddFor = quickAddFor===id ? null : id;
-    quickAddSym=null; quickAddDraft={onset:0,duration:null,severity:null};
+    quickAddSym=null; quickAddCustomOpen=false; quickAddDraft={onset:0,duration:null,severity:null};
     viewEntries();
   });
   app.querySelectorAll("[data-picksym]").forEach(b=>b.onclick=()=>{
@@ -1097,6 +1145,22 @@ function viewEntries(){
     quickAddDraft={onset:Math.max(0,Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000)),
       duration:null, severity:null};
     viewEntries();
+  });
+  app.querySelectorAll("[data-qacustom]").forEach(b=>b.onclick=()=>{
+    quickAddCustomOpen=!quickAddCustomOpen; viewEntries();
+  });
+  app.querySelectorAll("[data-qacustomsave]").forEach(b=>b.onclick=()=>{
+    const m=meals.find(x=>x.id===b.dataset.qacustomsave);
+    const name=($("#qa_custominput")?.value||"").trim();
+    if(!name) return;
+    quickAddCustomOpen=false;
+    quickAddSym=name;
+    quickAddDraft={onset:Math.max(0,Math.round((Date.now()-new Date(m.eaten_at).getTime())/60000)),
+      duration:null, severity:null};
+    viewEntries();
+  });
+  if($("#qa_custominput")) $("#qa_custominput").addEventListener("keydown",ev=>{
+    if(ev.key==="Enter"){ ev.preventDefault(); $("[data-qacustomsave]").click(); }
   });
   const qacard=app.querySelector("[data-qacard]");
   if(qacard){
@@ -1119,7 +1183,7 @@ function viewEntries(){
     });
   }
   app.querySelectorAll("[data-qacancel]").forEach(b=>b.onclick=()=>{
-    quickAddFor=null; quickAddSym=null; viewEntries();
+    quickAddFor=null; quickAddSym=null; quickAddCustomOpen=false; viewEntries();
   });
   app.querySelectorAll("[data-qaconfirm]").forEach(b=>b.onclick=()=>{
     addSymptomToMeal(meals.find(m=>m.id===b.dataset.qaconfirm), quickAddSym, {...quickAddDraft});
@@ -1140,12 +1204,13 @@ function viewEntries(){
 
 /* ================= INSIGHTS ================= */
 function stats(){
+  const SYMS=allSymptomNames();
   const total=meals.length, sym=meals.filter(m=>m.any_symptoms);
   const avg=(a)=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
   const has=(m,name)=> name==="Large portion" ? m.large_portion : autoTags(m.foods).includes(name);
   const grid=Object.keys(TRIGGERS).concat(["Large portion"]).map(name=>({
     name,
-    cells:SYMPTOMS.map(s=>{
+    cells:SYMS.map(s=>{
       const withS=meals.filter(m=>(m.symptoms||[]).includes(s));
       if(!withS.length) return null;
       const hit=withS.filter(m=>has(m,name)).length;
@@ -1155,10 +1220,11 @@ function stats(){
     baseN: meals.filter(m=>has(m,name)).length,
   }));
   return {total, symCount:sym.length,
+    symptoms:SYMS,
     pct: total? sym.length/total : 0,
     onset: avg(sym.map(firstOnset).filter(v=>v!=null)),
     sev: avg(sym.map(worstSeverity).filter(v=>v!=null)),
-    counts: SYMPTOMS.map(s=>meals.filter(m=>(m.symptoms||[]).includes(s)).length),
+    counts: SYMS.map(s=>meals.filter(m=>(m.symptoms||[]).includes(s)).length),
     grid,
     bgAll: readings.map(r=>r.blood_sugar).filter(v=>v!=null),
   };
@@ -1187,7 +1253,7 @@ function viewInsights(){
     <p class="sub">Read down a symptom column, then compare across to that row's All meals figure on the right.</p>
     <div class="card" style="padding:14px 16px">
       <div class="gridwrap"><table class="matrix">
-        <thead><tr><th class="rowh"></th>${SYMPTOMS.map(x=>`<th>${x.replace("/"," / ")}</th>`).join("")}<th class="basecol">All meals</th></tr></thead>
+        <thead><tr><th class="rowh"></th>${s.symptoms.map(x=>`<th>${x.replace("/"," / ")}</th>`).join("")}<th class="basecol">All meals</th></tr></thead>
         <tbody>
           <tr class="count"><th class="rowh">Meals with it</th>${s.counts.map(c=>`<td>${c}</td>`).join("")}<td>${s.total}</td></tr>
           ${s.grid.map(rw=>`<tr><th class="rowh">${rw.name}</th>${rw.cells.map(c=>{
@@ -1276,11 +1342,11 @@ function printSummary(){
 
     <h2>Symptom frequency</h2>
     <table><tr><th>Symptom</th><th>Meals</th></tr>
-      ${SYMPTOMS.map((x,i)=>`<tr><td>${x}</td><td>${s.counts[i]}</td></tr>`).join("")}</table>
+      ${s.symptoms.map((x,i)=>`<tr><td>${x}</td><td>${s.counts[i]}</td></tr>`).join("")}</table>
 
     <h2>Food factors in symptom meals</h2>
     <table>
-      <tr><th>Factor</th>${SYMPTOMS.map((x,i)=>`<th>${x}<br>(n=${s.counts[i]})</th>`).join("")}<th>All meals<br>(n=${s.total})</th></tr>
+      <tr><th>Factor</th>${s.symptoms.map((x,i)=>`<th>${x}<br>(n=${s.counts[i]})</th>`).join("")}<th>All meals<br>(n=${s.total})</th></tr>
       ${s.grid.map(rw=>`<tr><td>${rw.name}</td>${rw.cells.map(c=>
         `<td>${c==null?"—":Math.round(c.pct*100)+"% <small>("+c.hit+"/"+c.of+")</small>"}</td>`).join("")}<td>${Math.round(rw.base*100)}% <small>(${rw.baseN}/${s.total})</small></td></tr>`).join("")}
     </table>
