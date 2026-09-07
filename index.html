@@ -174,14 +174,19 @@ input[type=number]{font-family:var(--mono)}
 .stat:last-child{border-bottom:0}
 .stat b{font-family:var(--mono);font-weight:600;font-size:19px}
 .stat span{font-size:14px;color:var(--ink-2)}
-.gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
-table.matrix{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+.matrixwrap{display:flex;align-items:flex-start}
+.matrix-fixed{flex:none}
+.gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-right:-16px;padding-right:16px;
+  flex:1;min-width:0}
+table.matrix{border-collapse:separate;border-spacing:0;font-size:13px}
 table.matrix th,table.matrix td{padding:8px 7px;text-align:center;white-space:nowrap}
-table.matrix th.rowh{text-align:left;font-weight:500;position:sticky;left:0;background:var(--surface);
-  padding-right:12px;z-index:1;
-  -webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+table.matrix th.rowh{text-align:left;font-weight:500;background:var(--surface);padding-right:12px;
+  vertical-align:middle}
+/* Data cells carry two lines (percent + count); force every body row in both the fixed label
+   table and the scrolling data table to the same height so their rows can't drift apart. */
+table.matrix tbody tr:not(.count){height:42px}
 table.matrix thead th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);
-  font-weight:600;vertical-align:bottom;line-height:1.25;white-space:normal;min-width:58px}
+  font-weight:600;vertical-align:bottom;line-height:1.25;min-width:58px}
 table.matrix tr.count td,table.matrix tr.count th{border-bottom:2px solid var(--ink);
   font-family:var(--mono);font-size:12px;color:var(--muted);padding-bottom:6px}
 table.matrix td.v{font-family:var(--mono);line-height:1.15;padding:7px}
@@ -1257,18 +1262,27 @@ function viewInsights(){
     <h2 class="sec">What was in those meals</h2>
     <p class="sub">Read down a symptom column, then compare across to that row's All meals figure on the right.</p>
     <div class="card" style="padding:14px 16px">
-      <div class="gridwrap"><table class="matrix">
-        <thead><tr><th class="rowh"></th>${s.symptoms.map(x=>`<th>${x.replace("/"," / ")}</th>`).join("")}<th class="basecol">All meals</th></tr></thead>
-        <tbody>
-          <tr class="count"><th class="rowh">Meals with symptom</th>${s.counts.map(c=>`<td>${c}</td>`).join("")}<td>${s.total}</td></tr>
-          ${s.grid.map(rw=>`<tr><th class="rowh">${rw.name}</th>${rw.cells.map(c=>{
-            if(c==null) return `<td class="v">—</td>`;
-            const lift = c.pct - rw.base;
-            const solid = c.hit>=3;                       // needs real meals behind it
-            const cls = solid&&lift>=0.25 ? "hi" : (solid&&lift>=0.12 ? "mid" : "");
-            return `<td class="v ${cls}">${Math.round(c.pct*100)}%<small>${c.hit}/${c.of}</small></td>`;
-          }).join("")}<td class="v basecol">${Math.round(rw.base*100)}%<small>${rw.baseN}/${s.total}</small></td></tr>`).join("")}
-        </tbody></table></div>
+      <div class="matrixwrap">
+        <table class="matrix matrix-fixed">
+          <thead><tr><th class="rowh">&nbsp;</th></tr></thead>
+          <tbody>
+            <tr class="count"><th class="rowh">Meals with symptom</th></tr>
+            ${s.grid.map(rw=>`<tr><th class="rowh">${rw.name}</th></tr>`).join("")}
+          </tbody>
+        </table>
+        <div class="gridwrap"><table class="matrix">
+          <thead><tr>${s.symptoms.map(x=>`<th>${x.replace("/"," / ")}</th>`).join("")}<th class="basecol">All meals</th></tr></thead>
+          <tbody>
+            <tr class="count">${s.counts.map(c=>`<td>${c}</td>`).join("")}<td>${s.total}</td></tr>
+            ${s.grid.map(rw=>`<tr>${rw.cells.map(c=>{
+              if(c==null) return `<td class="v">—</td>`;
+              const lift = c.pct - rw.base;
+              const solid = c.hit>=3;                       // needs real meals behind it
+              const cls = solid&&lift>=0.25 ? "hi" : (solid&&lift>=0.12 ? "mid" : "");
+              return `<td class="v ${cls}">${Math.round(c.pct*100)}%<small>${c.hit}/${c.of}</small></td>`;
+            }).join("")}<td class="v basecol">${Math.round(rw.base*100)}%<small>${rw.baseN}/${s.total}</small></td></tr>`).join("")}
+          </tbody></table></div>
+      </div>
       <p class="legend">Each cell shows the share, with the actual meal counts beneath it. A cell is highlighted only when it sits well above that row's <b>All meals</b> figure <em>and</em> rests on at least 3 meals. Nothing highlighted means nothing has separated from noise yet.</p>
     </div>
 
