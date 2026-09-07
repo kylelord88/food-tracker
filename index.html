@@ -208,7 +208,6 @@ table.matrix tr.base th,table.matrix tr.base td{color:var(--muted);font-size:11.
 .stag b{font-family:var(--mono);font-weight:600;opacity:.7}
 .stag.on{background:var(--plum);border-color:var(--plum);color:#fff}
 .stag.on b{opacity:.9}
-.stag.zero{opacity:.42;cursor:default}
 
 /* filters */
 .morebtn{width:100%;background:none;border:1.5px solid var(--hair);border-radius:var(--r-sm);
@@ -917,7 +916,8 @@ const READING_FILTERS = {
 };
 
 function matchesFilters(m){
-  if(filt.sym.size && !(m.symptoms||[]).some(s=>filt.sym.has(s))) return false;
+  // Symptom filters narrow (AND): a meal must have every selected symptom, not just any one.
+  if(filt.sym.size && ![...filt.sym].every(s=>(m.symptoms||[]).includes(s))) return false;
   if(filt.trig.size){ const f=mealFactors(m); if(!f.some(x=>filt.trig.has(x))) return false; }
   if(filt.read.size && ![...filt.read].some(k=>READING_FILTERS[k](m))) return false;
   return true;
@@ -1009,17 +1009,22 @@ function viewEntries(){
   }
 
   const SYMS = allSymptomNames();
-  const symCount = s => meals.filter(m=>(m.symptoms||[]).includes(s)).length;
+  // Counts (and which tags even show up) are based on meals matching the symptoms already
+  // selected, so picking one narrows the rest to what actually co-occurs with it.
+  const symBase = filt.sym.size ? meals.filter(m=>[...filt.sym].every(s=>(m.symptoms||[]).includes(s))) : meals;
+  const symCount = s => symBase.filter(m=>(m.symptoms||[]).includes(s)).length;
   const counts = SYMS.map(symCount);
   const maxCount = Math.max(1,...counts);
   const shown = meals.filter(matchesFilters);
 
-  const symTags = SYMS.map((s,i)=>{
-    const n=counts[i], on=filt.sym.has(s);
-    const size = (12.5 + (n/maxCount)*3.5).toFixed(1); // heavier-used symptoms read slightly larger
-    return `<button type="button" class="stag${n?"":" zero"}${on?" on":""}" data-sym="${esc(s)}" ${n?"":"disabled"}
-             aria-pressed="${on}" style="font-size:${size}px">${esc(s)} <b>${n}</b></button>`;
-  }).join("");
+  const symTags = SYMS.map((s,i)=>({s,n:counts[i]}))
+    .filter(({s,n})=> n>0 || filt.sym.has(s))
+    .map(({s,n})=>{
+      const on=filt.sym.has(s);
+      const size = (12.5 + (n/maxCount)*3.5).toFixed(1); // heavier-used symptoms read slightly larger
+      return `<button type="button" class="stag${on?" on":""}" data-sym="${esc(s)}"
+               aria-pressed="${on}" style="font-size:${size}px">${esc(s)} <b>${n}</b></button>`;
+    }).join("");
 
   const trigChips = TRIGGER_NAMES.map(t=>{
     const n=meals.filter(m=>mealFactors(m).includes(t)).length;
