@@ -195,23 +195,20 @@ table.matrix tr.base th,table.matrix tr.base td{color:var(--muted);font-size:11.
 .warn{background:var(--amber-wash);border-left:3px solid var(--amber);padding:11px 13px;
   border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:13.5px;color:#6B4A12;margin-bottom:14px}
 
-/* symptom summary */
-.sumcard{padding:14px 14px 8px}
+/* symptom summary — tag cloud */
+.sumcard{padding:14px 14px 13px}
 .sumhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;
-  padding-bottom:9px;border-bottom:1px solid var(--hair);margin-bottom:4px}
+  padding-bottom:9px;border-bottom:1px solid var(--hair);margin-bottom:11px}
 .sumhead span{text-transform:none;letter-spacing:0;font-size:11px;opacity:.85}
-.srow{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;
-  padding:9px 4px;cursor:pointer;text-align:left;border-radius:7px}
-.srow .sname{flex:none;width:118px;font-size:14px}
-.srow .sbar{flex:1;height:7px;background:#EDF1EE;border-radius:99px;overflow:hidden}
-.srow .sbar i{display:block;height:100%;background:var(--plum);border-radius:99px}
-.srow .scount{flex:none;width:22px;text-align:right;font-family:var(--mono);font-size:14px;font-weight:600}
-.srow.on{background:var(--plum);color:#fff}
-.srow.on .sbar{background:rgba(255,255,255,.3)}
-.srow.on .sbar i{background:#fff}
-.srow.zero{opacity:.42;cursor:default}
-.srow.zero .scount{font-weight:400}
+.tagcloud{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.stag{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface-2);
+  border:1.5px solid var(--hair);border-radius:999px;padding:6px 12px;cursor:pointer;
+  color:var(--ink-2);line-height:1.25}
+.stag b{font-family:var(--mono);font-weight:600;opacity:.7}
+.stag.on{background:var(--plum);border-color:var(--plum);color:#fff}
+.stag.on b{opacity:.9}
+.stag.zero{opacity:.42;cursor:default}
 
 /* filters */
 .morebtn{width:100%;background:none;border:1.5px solid var(--hair);border-radius:var(--r-sm);
@@ -1017,13 +1014,11 @@ function viewEntries(){
   const maxCount = Math.max(1,...counts);
   const shown = meals.filter(matchesFilters);
 
-  const symRows = SYMS.map((s,i)=>{
+  const symTags = SYMS.map((s,i)=>{
     const n=counts[i], on=filt.sym.has(s);
-    return `<button class="srow${n?"":" zero"}${on?" on":""}" data-sym="${esc(s)}" ${n?"":"disabled"}
-             aria-pressed="${on}">
-      <span class="sname">${esc(s)}</span>
-      <span class="sbar"><i style="width:${n? Math.max(6,(n/maxCount)*100):0}%"></i></span>
-      <span class="scount">${n}</span></button>`;
+    const size = (12.5 + (n/maxCount)*3.5).toFixed(1); // heavier-used symptoms read slightly larger
+    return `<button type="button" class="stag${n?"":" zero"}${on?" on":""}" data-sym="${esc(s)}" ${n?"":"disabled"}
+             aria-pressed="${on}" style="font-size:${size}px">${esc(s)} <b>${n}</b></button>`;
   }).join("");
 
   const trigChips = TRIGGER_NAMES.map(t=>{
@@ -1095,7 +1090,7 @@ function viewEntries(){
 
     <div class="card sumcard">
       <div class="sumhead">Symptoms so far <span>tap to filter</span></div>
-      ${symRows}
+      <div class="tagcloud">${symTags}</div>
     </div>
 
     <button class="morebtn" id="more" aria-expanded="${showMore}">
