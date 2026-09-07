@@ -683,7 +683,6 @@ function viewAdd(){
       });
     });
   };
-  renderSymDetails();
 
   // Symptom chips, plus a "+ Add" chip for typing in one that isn't listed yet.
   // A symptom added here becomes a permanent option app-wide the moment this meal is saved
@@ -714,6 +713,7 @@ function viewAdd(){
     if(chip && chip.getAttribute("aria-pressed")!=="true") chip.click();
   };
   renderSymptomChips();
+  renderSymDetails(); // must run after the chips exist in the DOM, so it sees which are already selected
   $("#f_symp_addsave").onclick=addCustomSymptom;
   $("#f_symp_addinput").addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); addCustomSymptom(); } });
 
